@@ -90,9 +90,6 @@ class App:
     def on_loop(self):
         pass
 
-    def on_render(self):
-        pass
-
     def on_cleanup(self):
         pygame.quit()
 
@@ -110,7 +107,6 @@ class App:
             self.uav_group.clear(self.display,self.background)
             self.uav_group.draw(self.display)
             pygame.display.flip()
-            self.on_render()
 
         self.on_cleanup()
 
