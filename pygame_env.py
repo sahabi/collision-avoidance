@@ -3,6 +3,32 @@ import pygame
 from pygame.locals import *
 from time import sleep
 
+
+class PointSprite(pygame.sprite.Sprite):
+
+    def __init__(self, image, position):
+        pygame.sprite.Sprite.__init__(self)
+        self.src_image = pygame.image.load(image)
+        self.position = position
+        self.discrete = ()
+        self.chosen = False
+
+    def update(self, deltat):
+        if self.chosen:
+            color_surface(self, PURPLE)
+            self.image = pygame.transform.rotate(self.src_image, 0)
+        else:
+            color_surface(self, BLACK)
+            self.image = pygame.transform.rotate(self.src_image, 0)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.position[1:]
+
+    def select(self):
+        self.chosen = True
+
+    def unselect(self):
+        self.chosen = False
+
 class UAVSprite(pygame.sprite.Sprite):
     MAX_SPEED = 45
     TURN_SPEED = 5
@@ -14,9 +40,9 @@ class UAVSprite(pygame.sprite.Sprite):
         self.next_state = (position[0]+(position[1]/450), (position[1]%450)/45, position[2]/45) 
         self.speed = self.direction = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
+        self.discrete = self.next_state
 
     def move(self, action):
-        print self.next_state
         l, x, y = self.next_state
         if action == 'east' and self.next_state[1] < 9:
             x += 1
@@ -43,6 +69,7 @@ class UAVSprite(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.position
+        self.discrete = self.next_state
 
 def color_surface(surface, color):
     arr = pygame.surfarray.pixels3d(surface.src_image)
@@ -78,8 +105,10 @@ class App:
         self.uav_1 = UAVSprite('assets/uav_1.png', (0 , 45, 45))
         self.uav_2 = UAVSprite('assets/uav_2.png', (0, rect.center[0],
                                                     rect.center[1]))
+        self.point_1 = PointSprite('assets/uav_1.png', (0 , 90, 90))
         color_surface(self.uav_2, PURPLE)
-        self.uav_group = pygame.sprite.RenderPlain((self.uav_1, self.uav_2)) 
+        self.uav_group = pygame.sprite.RenderPlain((self.uav_1, self.uav_2))
+        self.point_group = pygame.sprite.RenderPlain((self.point_1))
         self.layers = 3
         pygame.display.flip()
 
@@ -101,13 +130,17 @@ class App:
             for event in pygame.event.get():
                 self.on_event(event)
             sleep(1)
-            self.uav_1.move('south')
-            self.uav_2.move('east')
             self.uav_group.update(1)
             self.uav_group.clear(self.display,self.background)
             self.uav_group.draw(self.display)
+            self.point_group.update(1)
+            self.point_group.clear(self.display,self.background)
+            self.point_group.draw(self.display)
             pygame.display.flip()
-
+            self.uav_1.move('north')
+            self.uav_2.move('west')
+            self.point_1.select()
+            print self.uav_2.discrete
         self.on_cleanup()
 
 if __name__ == "__main__" :
