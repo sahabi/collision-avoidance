@@ -1,7 +1,7 @@
 controller Ca_4 where
 
 enum Command = Stay | Asc | Des
-enum Pos = None | A | B | C | D
+enum Pos = None | A  
 enum Layer = First | Second
 
 input uav1_pos : Pos = None
@@ -31,14 +31,14 @@ env_liveness uav2_3_collide == False
 
 -- if the UAV is in the same layer as the mission location and commanded to go to the location, it will be there the next step
 env_trans ((uav1_layer == First) /\ (uav1_goto == A) ) -> (uav1_pos' == A)
-env_trans ((uav1_layer == First) /\ (uav1_goto == B) ) -> (uav1_pos' == B)
-env_trans ((uav1_layer == Second) /\ (uav1_goto == C) ) -> (uav1_pos' == C)
-env_trans ((uav1_layer == Second) /\ (uav1_goto == D) ) -> (uav1_pos' == D)
+--env_trans ((uav1_layer == First) /\ (uav1_goto == B) ) -> (uav1_pos' == B)
+--env_trans ((uav1_layer == Second) /\ (uav1_goto == C) ) -> (uav1_pos' == C)
+--env_trans ((uav1_layer == Second) /\ (uav1_goto == D) ) -> (uav1_pos' == D)
 
 env_trans ((uav2_layer == First) /\ (uav2_goto == A) ) -> (uav2_pos' == A)
-env_trans ((uav2_layer == First) /\ (uav2_goto == B) ) -> (uav2_pos' == B)
-env_trans ((uav2_layer == Second) /\ (uav2_goto == C) ) -> (uav2_pos' == C)
-env_trans ((uav2_layer == Second) /\ (uav2_goto == D) ) -> (uav2_pos' == D)
+--env_trans ((uav2_layer == First) /\ (uav2_goto == B) ) -> (uav2_pos' == B)
+--env_trans ((uav2_layer == Second) /\ (uav2_goto == C) ) -> (uav2_pos' == C)
+--env_trans ((uav2_layer == Second) /\ (uav2_goto == D) ) -> (uav2_pos' == D)
 
 -- if two UAVs are in the same layer then they don't collide
 env_trans ((uav1_layer == uav2_layer)) -> (uav1_2_collide == False)

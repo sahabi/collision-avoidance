@@ -2,7 +2,29 @@
 import pygame
 from pygame.locals import *
 from time import sleep
+from Ca_4 import Ca_4
+ctrl = Ca_4()
 
+print ctrl.move(0, 0, 0, False, False, False, 0, 0, 1)
+
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+PURPLE = (120, 78, 240)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (0, 200, 0)
+
+POS_LIST = []
+N_LAYERS = 2
+
+def is_collide(uav1, uav2):
+    return False
+
+def is_in(loc1, loc2):
+    if abs(loc1[0] - loc2[0]) < 50 and abs(loc1[1] - loc2[1]) < 50:
+        return True
+    else:
+        return False
 
 def make_rect(initial, destination):
     if initial[0] < destination[0]:
@@ -49,13 +71,13 @@ class RegionSprite(pygame.sprite.Sprite):
 
 class PointSprite(pygame.sprite.Sprite):
 
-    def __init__(self, image, position):
+    def __init__(self, position, label):
         pygame.sprite.Sprite.__init__(self)
-        self.src_image = pygame.image.load(image)
+        self.src_image = pygame.image.load("assets/point.png")
         self.src_image = pygame.transform.scale(self.src_image,(25,25))
         self.position = position
-        self.discrete = ()
         self.chosen = False
+        self.label = label
 
     def update(self):
         if self.chosen:
@@ -65,7 +87,8 @@ class PointSprite(pygame.sprite.Sprite):
             color_surface(self, BLACK)
             self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
-        self.rect.center = self.position[1:]
+        self.rect.center = (self.position[0]*450 + self.position[1],
+                            self.position[2])
 
     def select(self):
         self.chosen = True
@@ -77,14 +100,22 @@ class UAVSprite(pygame.sprite.Sprite):
     MAX_SPEED = 45
     TURN_SPEED = 5
 
-    def __init__(self, image, position):
+    def __init__(self, position, color, display):
         pygame.sprite.Sprite.__init__(self)
-        self.src_image = pygame.image.load(image)
+        self.src_image = pygame.image.load("assets/uav.png")
         self.position = position
         self.next_state = (position[0]+(position[1]/450), (position[1]%450)/45, position[2]/45)
         self.speed = self.direction = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
         self.discrete = self.next_state
+        arr = pygame.surfarray.pixels3d(self.src_image)
+        arr[:,:,0] = color[0]
+        arr[:,:,1] = color[1]
+        arr[:,:,2] = color[2]
+        self.color = color
+        self.display = display
+        self.region_rect = (0,0,0,0)
+
 
     def move(self, action):
         l, x, y = self.next_state
@@ -96,7 +127,7 @@ class UAVSprite(pygame.sprite.Sprite):
             y += 1
         elif action == 'north' and self.next_state[2] > 1:
             y -= 1
-        elif action == 'ascend' and self.next_state[0] < 3:
+        elif action == 'ascend' and self.next_state[0] < N_LAYERS:
             l += 1
             x += 0
             y += 0
@@ -115,16 +146,31 @@ class UAVSprite(pygame.sprite.Sprite):
         self.rect.center = self.position
         self.discrete = self.next_state
 
+    def update_region(self, point, color = None):
+        if point.position[0] == self.discrete[0]:
+            initial = self.position
+            rect = make_rect(initial,[point.position[0]*450+ point.position[1],
+                           point.position[2]])
+            if color is not None:
+                pygame.draw.rect(self.display, color, rect, 2)
+            else:
+                pygame.draw.rect(self.display, self.color, rect, 2)
+            self.region_rect = rect
+
+    def get_layer(self):
+        return self.discrete[0]
+
+    def get_pos(self):
+        for pos in POS_LIST:
+            if is_in(self.rect.center, pos.rect.center):
+                return pos.label
+        return 0
+
 def color_surface(surface, color):
     arr = pygame.surfarray.pixels3d(surface.src_image)
     arr[:,:,0] = color[0]
     arr[:,:,1] = color[1]
     arr[:,:,2] = color[2]
-
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-PURPLE = (120, 78, 240)
-RED = (255, 0, 0)
 
 class App:
     def __init__(self):
@@ -147,20 +193,28 @@ class App:
                          [2*int(self.width/self.layers), 0],
                          [2*int(self.width/self.layers), self.height], 5)
         rect = self.display.get_rect()
-        self.uav_1 = UAVSprite('assets/uav_1.png', (0 , 45, 45))
-        self.uav_2 = UAVSprite('assets/uav_2.png', (0, rect.center[0],
-                                                    rect.center[1]))
-        self.point_1 = PointSprite('assets/point.png', (0 , 90, 90))
-        color_surface(self.uav_2, PURPLE)
-        self.point_2 = PointSprite('assets/point.png', (0 , 190, 90))
-        self.point_3 = PointSprite('assets/point.png', (0 , 590, 90))
+        self.uav_1 = UAVSprite((0 , 45, 45), BLACK, self.display)
+        self.uav_2 = UAVSprite((0, rect.center[0], rect.center[1]), PURPLE,
+                               self.display)
+        self.uav_3 = UAVSprite((1, 45, 80), GREEN, self.display)
 
+        self.point_1 = PointSprite((0 , 90, 90), 'A')
+        self.point_2 = PointSprite((0 , 190, 90), 'B')
+        self.point_3 = PointSprite((1 , 45, 90), 'C')
+        self.point_4 = PointSprite((1, 400, 200), 'D')
+
+        POS_LIST.append(self.point_1)
+        POS_LIST.append(self.point_2)
+        POS_LIST.append(self.point_3)
+        POS_LIST.append(self.point_4)
         self.operating_region_1 = Circle(self.display, BLACK, (100,100,200,200))
         self.region_group = pygame.sprite.RenderPlain((self.operating_region_1))
-        self.uav_group = pygame.sprite.RenderPlain((self.uav_1, self.uav_2))
+        self.uav_group = pygame.sprite.RenderPlain((self.uav_1, self.uav_2,
+                                                    self.uav_3))
         self.point_group = pygame.sprite.RenderPlain((self.point_1,
                                                       self.point_2,
-                                                      self.point_3))
+                                                      self.point_3,
+                                                      self.point_4))
         self.layers = 3
         pygame.display.flip()
 
@@ -174,6 +228,15 @@ class App:
     def on_cleanup(self):
         pygame.quit()
 
+    def reset_map(self):
+        self.display.fill(pygame.Color("white"))
+        pygame.draw.line(self.display, (100, 100, 100), [int(self.width/self.layers), 0],
+                    [int(self.width/self.layers), self.height], 5)
+        pygame.draw.line(self.display, (100, 100, 100),
+                    [2*int(self.width/self.layers), 0],
+                    [2*int(self.width/self.layers), self.height], 5)
+
+
     def on_execute(self):
         if self.on_init() == False:
             self._running = False
@@ -181,14 +244,9 @@ class App:
         while( self._running ):
             for event in pygame.event.get():
                 self.on_event(event)
-            sleep(1)
-            self.display.fill(pygame.Color("white"))
 
-            pygame.draw.line(self.display, (100, 100, 100), [int(self.width/self.layers), 0],
-                         [int(self.width/self.layers), self.height], 5)
-            pygame.draw.line(self.display, (100, 100, 100),
-                         [2*int(self.width/self.layers), 0],
-                         [2*int(self.width/self.layers), self.height], 5)
+            sleep(1)
+            self.reset_map()
 
             self.uav_group.update()
             self.uav_group.clear(self.display,self.background)
@@ -198,23 +256,24 @@ class App:
             self.point_group.clear(self.display,self.background)
             self.point_group.draw(self.display)
 
-            initial_1 = self.uav_1.position
-            dist_1 = (50, 700)
-            rect_1 = make_rect(initial_1, dist_1)
-            pygame.draw.rect(self.display, BLACK, rect_1, 2)
+            #self.uav_1.update_region(self.point_1)
+            #self.uav_2.update_region(self.point_3)
 
-            initial_2 = self.uav_2.position
-            dist_2 = (600, 1000)
-            rect_2 = make_rect(initial_2, dist_2)
-            pygame.draw.rect(self.display, PURPLE, rect_2, 2)
-#            self.region_group.update(rect)
-#            self.region_group.clear(self.display, self.background)
-#            self.region_group.draw(self.display)
-
+            #self.uav_2.move('east')
+            #self.uav_1.move('east')
+            uav1_pos = self.uav_1.get_pos()
+            uav2_pos = self.uav_2.get_pos()
+            uav3_pos = self.uav_3.get_pos()
+            uav1_2_collide = is_collide(self.uav_1, self.uav_2)
+            uav1_3_collide = is_collide(self.uav_1, self.uav_3)
+            uav2_3_collide = is_collide(self.uav_2, self.uav_3)
+            uav1_layer = self.uav_1.get_layer()
+            uav2_layer = self.uav_2.get_layer()
+            uav3_layer = self.uav_3.get_layer()
+            print (uav1_pos, uav2_pos, uav3_pos, uav1_2_collide,
+                   uav1_3_collide, uav2_3_collide, uav1_layer, uav2_layer,
+                   uav3_layer)
             pygame.display.flip()
-            self.uav_1.move('north')
-            self.uav_2.move('west')
-            self.point_1.select()
 
         self.on_cleanup()
 
