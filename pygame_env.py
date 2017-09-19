@@ -54,6 +54,23 @@ def make_rect(initial, destination):
     l = abs(initial[1] - destination[1]) + 60
     return pygame.Rect(x, y, w, l)
 
+def get_commands(uav, point):
+    diff_x = uav.position[0] - point[0]
+    diff_y = uav.position[1] - point[1]
+    print diff_x, diff_y
+    hor_cmd = ['east']*abs(diff_x/45) if diff_x <= 0 else ['west']*(diff_x/45)
+    ver_cmd = ['south']*abs(diff_y/45) if diff_y <= 0 else ['north']*(diff_y/45)
+    return hor_cmd + ver_cmd
+
+def get_dir(loc_1, loc_2):
+    if loc_1[0] > loc_2[0]:
+        return 'west'
+    elif loc_1[1] > loc_2[1]:
+        return 'north'
+    elif loc_1[1] < loc_2[1]:
+        return 'south'
+    elif loc_1[0] < loc_2[0]:
+        return 'east'
 
 class Circle(pygame.sprite.Sprite):
     def __init__(self, display, color, init_rect):
@@ -159,6 +176,7 @@ class UAVSprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = self.position
         self.discrete = self.next_state
+        pygame.draw.rect(self.display, self.color, self.region_rect, 2)
 
     def update_region(self, position, color = None):
         if position[0] == self.discrete[0]:
@@ -215,7 +233,10 @@ class App:
         self.uav_2 = UAVSprite((0, 45,300), PURPLE,
                                self.display)
         self.uav_3 = UAVSprite((1, 45, 80), GREEN, self.display)
-
+        self.UAV_LIST = []
+        self.UAV_LIST.append(self.uav_1)
+        self.UAV_LIST.append(self.uav_2)
+        self.UAV_LIST.append(self.uav_3)
         self.point_1 = PointSprite((1 , 300, 300), 1)
         #self.point_2 = PointSprite((0 , 190, 90), 'B')
         #self.point_3 = PointSprite((1 , 45, 90), 'C')
@@ -231,6 +252,18 @@ class App:
                                                     self.uav_3))
         self.point_group = pygame.sprite.RenderPlain(POS_LIST)
         self.layers = 2
+        self.uav_group.update()
+        self.uav_group.clear(self.display,self.background)
+        self.uav_group.draw(self.display)
+
+        self.point_group.update()
+        self.point_group.clear(self.display,self.background)
+        self.point_group.draw(self.display)
+
+        self.uav_1.update_region((0, 150, 150))
+        self.uav_2.update_region((0, 300, 300))
+        self.uav_3.update_region((1, 200, 200))
+
         pygame.display.flip()
 
     def on_event(self, event):
@@ -269,9 +302,6 @@ class App:
             self.uav_group.update()
             self.uav_group.clear(self.display,self.background)
             self.uav_group.draw(self.display)
-            self.uav_1.update_region((0, 150, 150))
-            self.uav_2.update_region((0, 300, 300))
-            self.uav_3.update_region((1, 200, 200))
 
             self.point_group.update()
             self.point_group.clear(self.display,self.background)
@@ -293,6 +323,21 @@ class App:
 
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
+            outputs['uav1_goto'] = 1
+            outputs['uav2_goto'] = 2
+            commands = {0:[],1:[],2:[]}
+            for i in range(0,3):
+                if outputs['uav{}_action'.format(i+1)] == 1:
+                    self.UAV_LIST[i].move('ascend')
+                elif outputs['uav{}_action'.format(i+1)] == 2:
+                    self.UAV_LIST[i].move('descend')
+                elif outputs['uav{}_goto'.format(i+1)] == 1:
+                    print commands
+                    commands[i] = get_commands(self.UAV_LIST[i], (250, 500))
+                if len(commands[i]) > 0:
+                    for command in commands[i]:
+                        self.UAV_LIST[i].move(command)
+
             pygame.display.flip()
 
         self.on_cleanup()
