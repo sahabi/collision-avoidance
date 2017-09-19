@@ -5364,7 +5364,6 @@ class Ca_4(object):
     def move(self, uav1_pos, uav2_pos, uav3_pos, uav1_2_collide, uav1_3_collide, uav2_3_collide, uav1_layer, uav2_layer, uav3_layer):
         try:
             table = self._table[self._state]
-            print table
             newState,res = table[(uav1_pos,uav2_pos,uav3_pos,uav1_2_collide,uav1_3_collide,uav2_3_collide,uav1_layer,uav2_layer,uav3_layer)]
             self._state = newState
             return {
