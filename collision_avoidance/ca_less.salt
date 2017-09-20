@@ -30,15 +30,16 @@ env_liveness uav1_3_collide == False
 env_liveness uav2_3_collide == False
 
 -- if the UAV is in the same layer as the mission location and commanded to go to the location, it will be there the next step
-env_trans ((uav1_layer == First) /\ (uav1_goto == A) ) -> (uav1_pos' == A)
---env_trans ((uav1_layer == First) /\ (uav1_goto == B) ) -> (uav1_pos' == B)
---env_trans ((uav1_layer == Second) /\ (uav1_goto == C) ) -> (uav1_pos' == C)
---env_trans ((uav1_layer == Second) /\ (uav1_goto == D) ) -> (uav1_pos' == D)
+env_trans
+  ((uav1_layer == First) /\ (uav1_goto == A) ) -> (uav1_pos' == A)
+-- ((uav1_layer == First) /\ (uav1_goto == B) ) -> (uav1_pos' == B)
+-- ((uav1_layer == Second) /\ (uav1_goto == C) ) -> (uav1_pos' == C)
+-- ((uav1_layer == Second) /\ (uav1_goto == D) ) -> (uav1_pos' == D)
 
 env_trans ((uav2_layer == First) /\ (uav2_goto == A) ) -> (uav2_pos' == A)
---env_trans ((uav2_layer == First) /\ (uav2_goto == B) ) -> (uav2_pos' == B)
---env_trans ((uav2_layer == Second) /\ (uav2_goto == C) ) -> (uav2_pos' == C)
---env_trans ((uav2_layer == Second) /\ (uav2_goto == D) ) -> (uav2_pos' == D)
+-- ((uav2_layer == First) /\ (uav2_goto == B) ) -> (uav2_pos' == B)
+-- ((uav2_layer == Second) /\ (uav2_goto == C) ) -> (uav2_pos' == C)
+-- ((uav2_layer == Second) /\ (uav2_goto == D) ) -> (uav2_pos' == D)
 
 -- if two UAVs are in the same layer then they don't collide
 env_trans ((uav1_layer == uav2_layer)) -> (uav1_2_collide == False)
@@ -65,6 +66,7 @@ env_trans ( (uav2_layer == Second) /\ (uav2_action == Des) ) -> (uav2_layer' == 
 env_trans ( (uav2_layer == Second) /\ ( (uav2_action == Stay) \/ (uav2_action == Asc) )) -> (uav2_layer' == Second)
 
 -- UAV cannot change its altitude if its operating region collides with a UAV in the destination altitude layer
+
 sys_trans ( (uav1_layer == First) /\ (uav2_layer == Second) /\ (uav1_2_collide == True)  ) -> ( (uav1_action != Asc) /\ (uav2_action != Des) )
 sys_trans ( (uav1_layer == Second) /\ (uav2_layer == First) /\ (uav1_2_collide == True)  ) -> ( (uav1_action != Des) /\ (uav2_action != Asc) )
 
@@ -73,3 +75,10 @@ sys_trans ( (uav1_layer == Second) /\ (uav3_layer == First) /\ (uav1_3_collide =
 
 sys_trans ( (uav2_layer == First) /\ (uav3_layer == Second) /\ (uav2_3_collide == True)  ) -> ( (uav2_action != Asc) /\ (uav3_action != Des) )
 sys_trans ( (uav2_layer == Second) /\ (uav3_layer == First) /\ (uav2_3_collide == True)  ) -> ( (uav2_action != Des) /\ (uav3_action != Asc) )
+
+-- UAV cannot change to a mission location if in the same layer as the location
+
+
+-- UAV mission
+
+sys_liveness uav3_action == Des /\ uav3_goto' == A

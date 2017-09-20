@@ -1,6 +1,5 @@
 import sys
 import zmq
-from afrl.cmasi.AirVehicleState import AirVehicleState
 from lmcp import LMCPFactory
 
 port = "5560"

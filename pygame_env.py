@@ -3,9 +3,8 @@ import pygame
 from pygame.locals import *
 from time import sleep
 from Ca_4 import Ca_4
-ctrl = Ca_4()
 
-print ctrl.move(0, 0, 0, False, False, False, 0, 0, 1)
+ctrl = Ca_4()
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -20,19 +19,29 @@ N_LAYERS = 2
 def return_input(uav1_pos, uav2_pos, uav3_pos, uav1_2_collide, uav1_3_collide,
                 uav2_3_collide, uav1_layer, uav2_layer, uav3_layer):
     return {
-        "uav1_pos": uav1_pos,
-        "uav2_pos": uav2_pos,
-        "uav3_pos": uav3_pos,
+        "uav1_pos": Ca_4.Pos.NONE if uav1_pos == 0 else Ca_4.Pos.A,
+        "uav2_pos": Ca_4.Pos.NONE if uav2_pos == 0 else Ca_4.Pos.A,
+        "uav3_pos": Ca_4.Pos.NONE if uav3_pos == 0 else Ca_4.Pos.A,
         "uav1_2_collide": uav1_2_collide,
         "uav1_3_collide": uav1_3_collide,
         "uav2_3_collide": uav2_3_collide,
-        "uav1_layer": uav1_layer,
-        "uav2_layer": uav2_layer,
-        "uav3_layer": uav3_layer,
+        "uav1_layer": Ca_4.Layer.FIRST if uav1_layer == 0 else
+        Ca_4.Layer.SECOND,
+        "uav2_layer": Ca_4.Layer.FIRST if uav2_layer == 0 else
+        Ca_4.Layer.SECOND,
+        "uav3_layer": Ca_4.Layer.FIRST if uav3_layer == 0 else
+        Ca_4.Layer.SECOND,
     }
+
 
 def is_collide(uav1, uav2):
     return False
+
+def is_in_or(op_reg, point):
+    if X <=  point[0] <= X and  X <= point[1] <= X:
+        return True
+    else:
+        return False
 
 def is_in(loc1, loc2):
     if abs(loc1[0] - loc2[0]) < 20 and abs(loc1[1] - loc2[1]) < 20:
@@ -55,9 +64,10 @@ def make_rect(initial, destination):
     return pygame.Rect(x, y, w, l)
 
 def get_commands(uav, point):
+    print uav.position
+    print point
     diff_x = uav.position[0] - point[0]
     diff_y = uav.position[1] - point[1]
-    print diff_x, diff_y
     hor_cmd = ['east']*abs(diff_x/45) if diff_x <= 0 else ['west']*(diff_x/45)
     ver_cmd = ['south']*abs(diff_y/45) if diff_y <= 0 else ['north']*(diff_y/45)
     return hor_cmd + ver_cmd
@@ -136,6 +146,7 @@ class UAVSprite(pygame.sprite.Sprite):
         self.src_image = pygame.image.load("assets/uav.png")
         self.position = position
         self.next_state = (position[0]+(position[1]/450), (position[1]%450)/45, position[2]/45)
+        print self.next_state
         self.speed = self.direction = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
         self.discrete = self.next_state
@@ -158,15 +169,17 @@ class UAVSprite(pygame.sprite.Sprite):
             y += 1
         elif action == 'north' and self.next_state[2] > 1:
             y -= 1
-        elif action == 'ascend' and self.next_state[0] < N_LAYERS:
+        elif action == 'ascend' and self.next_state[0] < N_LAYERS-1:
             l += 1
             x += 0
             y += 0
-        elif action == 'descend' and self.next_state > 0:
+        elif action == 'descend' and self.next_state[0] > 0:
             l -= 1
-            x = 0
-            y = 0
+            x += 0
+            y += 0
         self.next_state = (l, x, y)
+        print self.next_state
+        print action
 
     def update(self):
         x = self.next_state[1] * 45 + (450 * self.next_state[0])
@@ -232,12 +245,12 @@ class App:
         self.uav_1 = UAVSprite((0 , 45, 45), BLACK, self.display)
         self.uav_2 = UAVSprite((0, 45,300), PURPLE,
                                self.display)
-        self.uav_3 = UAVSprite((1, 45, 80), GREEN, self.display)
+        self.uav_3 = UAVSprite((1, 45, 45), GREEN, self.display)
         self.UAV_LIST = []
         self.UAV_LIST.append(self.uav_1)
         self.UAV_LIST.append(self.uav_2)
         self.UAV_LIST.append(self.uav_3)
-        self.point_1 = PointSprite((1 , 300, 300), 1)
+        self.point_1 = PointSprite((0 , 300, 300), 1)
         #self.point_2 = PointSprite((0 , 190, 90), 'B')
         #self.point_3 = PointSprite((1 , 45, 90), 'C')
         #self.point_4 = PointSprite((1, 400, 200), 'D')
@@ -320,26 +333,26 @@ class App:
             inputs = return_input(uav1_pos, uav2_pos, uav3_pos, uav1_2_collide,
                    uav1_3_collide, uav2_3_collide, uav1_layer, uav2_layer,
                    uav3_layer)
-
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
-            outputs['uav1_goto'] = 1
-            outputs['uav2_goto'] = 2
+            #outputs['uav1_goto'] = 1
+            #outputs['uav2_goto'] = 2
             commands = {0:[],1:[],2:[]}
             for i in range(0,3):
-                if outputs['uav{}_action'.format(i+1)] == 1:
+                if outputs['uav{}_action'.format(i+1)] == Ca_4.Command.ASC:
                     self.UAV_LIST[i].move('ascend')
-                elif outputs['uav{}_action'.format(i+1)] == 2:
+                elif outputs['uav{}_action'.format(i+1)] == Ca_4.Command.DES:
                     self.UAV_LIST[i].move('descend')
-                elif outputs['uav{}_goto'.format(i+1)] == 1:
-                    print commands
-                    commands[i] = get_commands(self.UAV_LIST[i], (250, 500))
+                elif outputs['uav{}_goto'.format(i+1)] == Ca_4.Pos.A:
+                    commands[i] = get_commands(self.UAV_LIST[i],
+                                               (self.point_1.position[1],
+                                                self.point_1.position[2]))
                 if len(commands[i]) > 0:
                     for command in commands[i]:
                         self.UAV_LIST[i].move(command)
-
+           
             pygame.display.flip()
-
+            sleep(2)
         self.on_cleanup()
 
 if __name__ == "__main__" :
