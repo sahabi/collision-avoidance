@@ -1,4 +1,4 @@
-controller controller_4 where
+controller Controller_4 where
 
 enum Command = Stay | Asc | Des
 enum Pos = None | A | B 
