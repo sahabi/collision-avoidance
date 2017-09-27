@@ -2,7 +2,7 @@
 import pygame
 from pygame.locals import *
 from time import sleep
-from Ca_4 import Ca_4
+from Controller import Controller as Ca_4
 from pygame import Rect
 
 ctrl = Ca_4()
@@ -332,7 +332,6 @@ class App:
 
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
-            print(outputs)
             commands = {0:[],1:[],2:[]}
             for i in range(0,3):
                 if outputs['uav{}_goto'.format(i+1)] == Ca_4.Pos.A:

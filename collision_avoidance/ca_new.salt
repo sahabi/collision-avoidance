@@ -109,4 +109,5 @@ sys_trans
 
 sys_liveness 
   uav3_pos == A
+sys_liveness
   uav3_pos == B
