@@ -1,0 +1,72 @@
+controller Controller_4 where
+
+enum Pos = None | A | B 
+enum Layer = First | Second
+
+input uav1_2_collide : Bool = False
+input uav1_3_collide : Bool = False 
+input uav2_3_collide : Bool = False
+
+output uav1_layer : Layer = First
+output uav2_layer : Layer = First
+output uav3_layer : Layer = First
+
+output uav1_goto : Pos = None
+output uav2_goto : Pos = None
+output uav3_goto : Pos = None
+
+output uav1_intent : Pos = None
+output uav2_intent : Pos = None
+output uav3_intent : Pos = None
+
+-- eventually the operating regions don't overlap
+env_liveness 
+  uav1_2_collide == False
+  uav1_3_collide == False
+  uav2_3_collide == False
+  uav1_3_collide == False /\ uav2_3_collide == False
+  uav1_2_collide == False /\ uav1_3_collide == False
+  uav1_2_collide == False /\ uav2_3_collide == False
+
+env_trans
+
+  !(uav1_2_collide /\ uav1_3_collide /\ uav2_3_collide)
+
+-- the uav can only issue a goto command if the uav is in the same altitude layer as the point 
+sys_trans
+
+  uav1_layer == First -> (uav1_goto == A \/ uav1_goto == None)
+  uav1_layer == Second -> (uav1_goto == B \/ uav1_goto == None)
+
+  uav2_layer == First -> (uav2_goto == A \/ uav2_goto == None)
+  uav2_layer == Second -> (uav2_goto == B \/ uav2_goto == None)
+
+  uav3_layer == First -> (uav3_goto == A \/ uav3_goto == None)
+  uav3_layer == Second -> (uav3_goto == B \/ uav3_goto == None)
+
+
+-- UAV cannot change its altitude if its operating region collides with a UAV in the destination altitude layer
+
+sys_trans 
+
+  uav1_2_collide -> uav1_layer != uav2_layer 
+  uav1_3_collide -> uav1_layer != uav2_layer 
+  uav2_3_collide -> uav2_layer != uav3_layer
+
+-- UAV must signal intent before go to signal
+
+sys_trans
+  
+  uav1_goto' == A -> uav1_intent == A 
+  uav1_goto' == B -> uav1_intent == B
+  uav2_goto' == A -> uav2_intent == A 
+  uav2_goto' == B -> uav2_intent == B
+  uav3_goto' == A -> uav3_intent == A 
+  uav3_goto' == B -> uav3_intent == B
+
+-- UAV mission
+
+sys_liveness 
+  uav3_goto == A
+sys_liveness
+  uav3_goto == B
