@@ -97,6 +97,6 @@ venv.bak/
 
 # mkdocs documentation
 /site
-*.swp
+*.sw*
 # mypy
 .mypy_cache/
