@@ -1,7 +1,7 @@
-controller Ca_4 where
+controller Ca_2 where
 
 enum Command = Stay | Asc | Des
-enum Pos = None | A  
+enum Pos = None | A | B  
 enum Layer = First | Second
 
 input uav1_pos : Pos = None
@@ -11,10 +11,6 @@ input uav3_pos : Pos = None
 input uav1_2_collide : Bool = False
 input uav1_3_collide : Bool 
 input uav2_3_collide : Bool = False
-
---input uav1_intent : Command = Stay
---input uav2_intent : Command = Stay
---input uav3_intent : Command = Stay
 
 input uav1_layer : Layer = First
 input uav2_layer : Layer = First
@@ -50,23 +46,26 @@ env_trans
 
 
   ((uav1_layer == First) /\ (uav1_goto == A) ) -> (uav1_pos' == A)
+  ((uav1_layer == Second) /\ (uav1_goto == B) ) -> (uav1_pos' == B)
 -- ((uav1_layer == First) /\ (uav1_goto == B) ) -> (uav1_pos' == B)
 -- ((uav1_layer == Second) /\ (uav1_goto == C) ) -> (uav1_pos' == C)
 -- ((uav1_layer == Second) /\ (uav1_goto == D) ) -> (uav1_pos' == D)
 
+
   ((uav2_layer == First) /\ (uav2_goto == A) ) -> (uav2_pos' == A)
--- ((uav2_layer == First) /\ (uav2_goto == B) ) -> (uav2_pos' == B)
+  ((uav2_layer == Second) /\ (uav2_goto == B) ) -> (uav2_pos' == B)
 -- ((uav2_layer == Second) /\ (uav2_goto == C) ) -> (uav2_pos' == C)
 -- ((uav2_layer == Second) /\ (uav2_goto == D) ) -> (uav2_pos' == D)
 
-  ((uav3_layer == First) /\ (uav3_goto == A) ) -> (uav3_pos' == A)
 
+  ((uav3_layer == First) /\ (uav3_goto == A) ) -> (uav3_pos' == A)
+  ((uav3_layer == Second) /\ (uav3_goto == B) ) -> (uav3_pos' == B)
 
 -- if two UAVs are in the same layer then they don't collide
  
-  ((uav1_layer == uav2_layer)) -> (uav1_2_collide == False)
-  ((uav1_layer == uav3_layer)) -> (uav1_3_collide == False)
-  ((uav2_layer == uav3_layer)) -> (uav2_3_collide == False)
+--  ((uav1_layer == uav2_layer)) -> (uav1_2_collide == False)
+--  ((uav1_layer == uav3_layer)) -> (uav1_3_collide == False)
+--  ((uav2_layer == uav3_layer)) -> (uav2_3_collide == False)
 
 -- if a UAV ascend/descend, it will change its altitude layer (bordered)
   ((uav1_layer == First) /\ (uav1_action == Asc)) -> (uav1_layer' == Second)
@@ -99,7 +98,14 @@ sys_trans
   ((uav3_layer == First) /\ (uav3_goto != A)) -> (uav3_goto' != A)
   ((uav3_goto == A) /\ (uav3_pos != A)) -> (uav3_goto' == A)
   ((uav3_action == Stay) /\ (uav3_goto == None) /\ (uav3_action' != Stay)) -> (uav3_goto'== None)
+
+  ((uav3_layer == First) /\ (uav3_goto != B) /\ (uav3_action == Asc)) -> (uav3_goto' != B)
+  ((uav3_layer == Second) /\ (uav3_goto != B)) -> (uav3_goto' != B)
+  ((uav3_goto == B) /\ (uav3_pos != B)) -> (uav3_goto' == B)
+
+
 -- UAV mission
 
 sys_liveness 
   uav3_pos == A
+  uav3_pos == B
