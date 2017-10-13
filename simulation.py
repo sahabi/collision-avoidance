@@ -81,6 +81,7 @@ class UAVSprite(pygame.sprite.Sprite):
         self.color = color
         self.display = display
         self.operating_region = OpRegion(display, color)
+        self.region_rect = []
 
     def move(self, action):
         l, x, y = self.dpos
@@ -100,7 +101,6 @@ class UAVSprite(pygame.sprite.Sprite):
     def set_dpos(self, dpos):
         self.dpos = dpos
         self.pos = dpos2pos(self.dpos)
-        #sleep(.2)
 
     def collide(self, uav):
         return False
@@ -142,37 +142,31 @@ class UAVSprite(pygame.sprite.Sprite):
         else:
             xpoints = xpoints[:-1] + [xpoints[-1]]*(abs(ysteps)-abs(xsteps)+1)
         points = zip(zpoints, xpoints, ypoints)
-        print 'from: ', self.dpos
-        print 'to: ', point.dpos
-        print xpoints
-        print ypoints
-        print points
         return points
 
-    def setIntent(self, intent):
-        pass
+    def setIntent(self, intent, app):
+        if intent[4] == 'N':
+            return
+        if intent[4] == 'A':
+            point = app.point_record['point1']
+        elif intent[4] == 'B':
+            point = app.point_record['point2']
+        self.update_region(point, app)
+        sleep(.2)
 
     def update(self):
         self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+        for layer in range(len(self.region_rect)):
+            pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
 
-    def update_region(self, position, color = None):
-        if True:
-            initial = self.position
-            rect_1 = make_rect((initial[0]%450,initial[1]),[position[1]%450,
-                                      position[2]])
-            rect_2 = make_rect(((initial[0]%450) + 450, initial[1]),[450 + (position[1]%450), position[2]])
-            if color is not None:
-                pygame.draw.rect(self.display, color, rect_1, 2)
-                pygame.draw.rect(self.display, color, rect_2, 2)
-            else:
-                pygame.draw.rect(self.display, self.color, rect_1, 2)
-                pygame.draw.rect(self.display, self.color, rect_2, 2)
-            self.region_rect_1 = rect_1
-            self.region_rect_2 = rect_2
-        pygame.draw.rect(self.display, self.color, self.region_rect_1, 2)
-        pygame.draw.rect(self.display, self.color, self.region_rect_2, 2)
+    def update_region(self, dpos, app, color = None):
+        self.region_rect = []
+        for layer in range(LAYERS):
+            self.region_rect.append([layer*450+self.pos[0]-20,self.pos[1]-20,100,100])
+            pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
+        print self.region_rect
 
     def get_layer(self):
         return self.discrete[0]
@@ -278,26 +272,29 @@ class App:
             "uav2" :[],
             "uav3" :[]
         }
-        plan["uav1"].append('{}'.format(ctrl_output["uav1_layer"]))
-        plan["uav2"].append('{}'.format(ctrl_output["uav2_layer"]))
-        plan["uav3"].append('{}'.format(ctrl_output["uav3_layer"]))
-        plan["uav1"].append('{}'.format(ctrl_output["uav1_goto"]))
-        plan["uav2"].append('{}'.format(ctrl_output["uav2_goto"]))
-        plan["uav3"].append('{}'.format(ctrl_output["uav3_goto"]))
-        plan["uav1"].append('{}'.format(ctrl_output["uav1_intent"]))
-        plan["uav2"].append('{}'.format(ctrl_output["uav2_intent"]))
         plan["uav3"].append('{}'.format(ctrl_output["uav3_intent"]))
+        plan["uav2"].append('{}'.format(ctrl_output["uav2_intent"]))
+        plan["uav1"].append('{}'.format(ctrl_output["uav1_intent"]))
+        plan["uav3"].append('{}'.format(ctrl_output["uav3_goto"]))
+        plan["uav2"].append('{}'.format(ctrl_output["uav2_goto"]))
+        plan["uav1"].append('{}'.format(ctrl_output["uav1_goto"]))
+        plan["uav3"].append('{}'.format(ctrl_output["uav3_layer"]))
+        plan["uav2"].append('{}'.format(ctrl_output["uav2_layer"]))
+        plan["uav1"].append('{}'.format(ctrl_output["uav1_layer"]))
         return plan
 
     def exec_plan(self, plan):
         for uav in UAVS:
-            self.uav_record[uav].setLayer(plan[uav][0])
-            plan[uav].pop(0)
+            print("UAV: {}, Layer: {}".format(uav,plan[uav][-1]))
+            self.uav_record[uav].setLayer(plan[uav][-1])
+            plan[uav].pop()
+            self.uav_record[uav].gotoPoint(plan[uav][-1], self)
+            print("UAV: {}, Goto: {}".format(uav,plan[uav][-1]))
+            plan[uav].pop()
+            self.uav_record[uav].setIntent(plan[uav][-1], self)
+            print("UAV: {}, Intent: {}".format(uav,plan[uav][-1]))
+            plan[uav].pop()
             self.show()
-            self.uav_record[uav].gotoPoint(plan[uav][0], self)
-            plan[uav].pop()
-            self.uav_record[uav].setIntent(plan[uav][0])
-            plan[uav].pop()
         self.resolve_conflict()
 
     def on_execute(self):
