@@ -2,7 +2,7 @@
 import pygame
 from pygame.locals import *
 from time import sleep
-from Ca_4 import Ca_4
+from Controller import Controller as Ca_4
 from pygame import Rect
 
 ctrl = Ca_4()
@@ -17,6 +17,7 @@ GREEN = (0, 200, 0)
 POS_LIST = []
 N_LAYERS = 2
 rect = Rect((0,0,0,0))
+
 def return_input(uav1_pos, uav2_pos, uav3_pos, uav1_2_collide, uav1_3_collide,
                 uav2_3_collide, uav1_layer, uav2_layer, uav3_layer):
     return {
@@ -63,11 +64,6 @@ def make_rect(initial, destination):
     return pygame.Rect(x, y, w, l)
 
 def get_commands(uav, point):
-    #while not (uav.region_rect_1.collidepoint(point) or
-    #uav.region_rect_2.collidepoint(point)):
-    #    uav.region_rect_1 = make_rect(uav.position, point)
-    #    uav.region_rect_2 = make_rect(uav.position, point)
-    print uav.position, point
     diff_x = (uav.position[0]%450) - point[0]
     diff_y = uav.position[1] - point[1]
     hor_cmd = ['east']*abs(diff_x/45) if diff_x <= 0 else ['west']*(diff_x/45)
@@ -148,7 +144,6 @@ class UAVSprite(pygame.sprite.Sprite):
         self.position = position
         self.next_state = (position[0]+(position[1]/450), (position[1]%450)/45,
                            position[2]/45)
-        print self.next_state
         self.speed = self.direction = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
         self.discrete = self.next_state
@@ -337,7 +332,6 @@ class App:
 
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
-            print(outputs)
             commands = {0:[],1:[],2:[]}
             for i in range(0,3):
                 if outputs['uav{}_goto'.format(i+1)] == Ca_4.Pos.A:
