@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-Ca_old*
+Ca_*
 # C extensions
 *.so
 Controller*
