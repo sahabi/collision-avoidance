@@ -9,7 +9,7 @@ input uav2_3_collide : Bool = False
 
 output uav1_layer : Layer = First
 output uav2_layer : Layer = First
-output uav3_layer : Layer = First
+output uav3_layer : Layer = Second 
 
 output uav1_goto : Pos = None
 output uav2_goto : Pos = None
@@ -70,3 +70,11 @@ sys_liveness
   uav3_goto == A
 sys_liveness
   uav3_goto == B
+sys_liveness
+  uav2_goto == A
+sys_liveness
+  uav2_goto == B
+sys_liveness
+  uav1_goto == A
+sys_liveness
+  uav1_goto == B
