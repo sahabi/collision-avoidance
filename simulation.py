@@ -41,19 +41,6 @@ def return_input(uav1_2_collide, uav1_3_collide,
 def dpos2pos(dpos):
     return (dpos[0]*450 + dpos[1]*45, dpos[2]*45)
 
-class OpRegion(pygame.sprite.Sprite):
-    def __init__(self, display, color):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = display
-        self.rect = self.image.get_rect()
-
-    def update(self,rect):
-        self.image = pygame.Surface((rect[2], rect[3]))
-        self.image.fill((255,255,255))
-        self.rect = self.image.get_rect()
-        self.rect.center = (rect[0], rect[1])
-        pygame.draw.rect(self.image, BLACK, rect, 5)
-
 class PointSprite(pygame.sprite.Sprite):
 
     def __init__(self, dpos, label, text):
@@ -74,6 +61,8 @@ class PointSprite(pygame.sprite.Sprite):
     def __str__(self):
         return "{}, {}, {} ".format(self.dpos, self.text, self.label)
 
+    __repr__ = __str__
+
 loc_e = myfont.render('E', False, (0, 0, 0))
 escape_point = PointSprite((1, 0, 0), 0, loc_e)
 
@@ -92,9 +81,10 @@ class UAVSprite(pygame.sprite.Sprite):
         arr[:,:,2] = color[2]
         self.color = color
         self.display = display
-        self.operating_region = OpRegion(display, color)
         self.region_rect = self.make_regions(self.dpos)
         self.path_region = []
+        esc_label = myfont.render(ID, False, (0,0,0))
+        self.escape_point = (5, 9)
 
     def move(self, action):
         l, x, y = self.dpos
@@ -139,11 +129,13 @@ class UAVSprite(pygame.sprite.Sprite):
         return False
 
     def _gotoPoint(self, point, app):
+        print("the point", point)
         path = self.get_path(point.dpos)
+        print("the path", path)
         for point in path:
             self.set_dpos(point)
             app.show()
-            sleep(.2)
+            sleep(.1)
 
     def gotoPoint(self, point, app):
         if point[4] == 'N':
@@ -157,6 +149,7 @@ class UAVSprite(pygame.sprite.Sprite):
     def get_path(self, dpos):
         xsteps = self.dpos[1] - dpos[1]
         ysteps = self.dpos[2] - dpos[2]
+        print(xsteps,ysteps)
         if xsteps < 0:
             xpoints = [self.dpos[1] + i + 1 for i in range(abs(xsteps))]
         elif xsteps > 0:
@@ -169,7 +162,7 @@ class UAVSprite(pygame.sprite.Sprite):
             ypoints = [self.dpos[2] - i - 1 for i in range(ysteps)]
         else:
             ypoints = [self.dpos[2]]
-        zpoints = [self.dpos[0]]*max(xsteps,ysteps)
+        zpoints = [self.dpos[0]]*max(abs(xsteps),abs(ysteps))
         if abs(xsteps) > abs(ysteps):
             if ysteps == 1:
                 ypoints = ypoints * (abs(xsteps)-abs(ysteps)+1)
@@ -195,7 +188,7 @@ class UAVSprite(pygame.sprite.Sprite):
             conflict = "{}_{}".format(self.IDn, self.region_intersects(app).IDn)
             print("FAIL: UAV {} intersects with {}".format(self.ID,
                 self.region_intersects(app).ID))
-        sleep(.2)
+        sleep(.1)
         return conflict
 
     def make_regions(self, dpos):
@@ -223,14 +216,18 @@ class UAVSprite(pygame.sprite.Sprite):
         self.region_rect = self.make_regions(self.dpos)
 
     def send_away(self, app):
+        print("sending away")
+        label = myfont.render('A',False,(0,0,0))
+        escape_point = PointSprite((self.dpos[0],self.escape_point[0],
+            self.escape_point[1]), 1, text=label)
         self._gotoPoint(escape_point, app)
 
     def update(self):
         for layer in range(len(self.region_rect)):
             pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
-        for region in self.path_region:
-            pygame.draw.rect(self.display, self.color,
-                    region, 2)
+        #for region in self.path_region:
+        #    pygame.draw.rect(self.display, self.color,
+        #            region, 2)
         self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
@@ -354,7 +351,7 @@ class App:
         self.point_group.clear(self.display,self.background)
         self.point_group.draw(self.display)
         pygame.display.flip()
-        sleep(0.2)
+        sleep(0.1)
 
     def plan_mission(self, ctrl_output):
         plan = {
@@ -406,7 +403,7 @@ class App:
             outputs = ctrl.move(**inputs)
             plan = self.plan_mission(outputs)
             self.exec_plan(plan)
-            sleep(.2)
+            sleep(.1)
 
         self.on_cleanup()
 
