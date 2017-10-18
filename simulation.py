@@ -6,6 +6,7 @@ from Controller_4 import Controller_4 as Ca_4
 from pygame import Rect
 import sys
 from Queue import Queue
+
 ctrl = Ca_4()
 
 BLACK = (0, 0, 0)
@@ -22,14 +23,9 @@ pygame.font.init()
 myfont = pygame.font.SysFont('Comic Sans MS', 22)
 escape_points = Queue(maxsize=6)
 escape_points.put((1,1))
-escape_points.put((2,1))
+escape_points.put((8,1))
 escape_points.put((5,5))
 escape_points.put((4,11))
-
-def get_escape():
-    point = escape_points.get()
-    escape_points.put(point)
-    return point
 
 for i in range(N_UAVS):
     UAVS.append('uav{}'.format(i))
@@ -50,6 +46,17 @@ def return_input(uav1_2_collide, uav1_3_collide,
 
 def dpos2pos(dpos):
     return (dpos[0]*450 + dpos[1]*45, dpos[2]*45)
+
+
+def _collide(rect1, rect2):
+    for layer1 in range(LAYERS):
+        for layer2 in range(LAYERS):
+            if Rect(rect1[layer1]).colliderect(Rect(rect2[layer2])):
+                return True
+            else:
+                return False
+
+
 
 class PointSprite(pygame.sprite.Sprite):
 
@@ -74,7 +81,6 @@ class PointSprite(pygame.sprite.Sprite):
     __repr__ = __str__
 
 loc_e = myfont.render('E', False, (0, 0, 0))
-escape_point = PointSprite((1, 0, 0), 0, loc_e)
 
 class UAVSprite(pygame.sprite.Sprite):
 
@@ -120,6 +126,18 @@ class UAVSprite(pygame.sprite.Sprite):
 
     def in_region(self, dpos):
         return True
+
+    def collide(self, uav):
+        rect1 = [rect for rect in self.region_rect]
+        rect2 = [rect for rect in uav.region_rect]
+        return _collid(rect1, rect2)
+        #for layer1 in range(LAYERS):
+        #    for layer2 in range(LAYERS):
+        #        if Rect(self.region_rect[layer1]).colliderect(Rect(uav.region_rect[layer2])):
+        #            return True
+        #        else:
+        #            return False
+
 
     def collide(self, uav):
         for layer1 in range(LAYERS):
@@ -198,16 +216,18 @@ class UAVSprite(pygame.sprite.Sprite):
         sleep(.1)
         return conflict
 
-    def make_regions(self, dpos):
+    def make_regions(self, dpos, path=False):
         buf = 20
         regions = []
-        for layer in range(LAYERS):
-            x = layer*450 + (min(self.pos[0]%450, dpos[1]*45)) - buf
-            y = min(self.pos[1], dpos[2]*45) - buf
-            width = 2*buf + max(self.pos[0]%450, dpos[1]*45) - (min(self.pos[0]%450, dpos[1]*45))
-            length = 2*buf + max(self.pos[1], dpos[2]*45) - min(self.pos[1],
-                    dpos[2]*45)
-            regions.append([x, y, width, length])
+        if not path:
+            for layer in range(LAYERS):
+                x = layer*450 + (min(self.pos[0]%450, dpos[1]*45)) - buf
+                y = min(self.pos[1], dpos[2]*45) - buf
+                width = 2*buf + max(self.pos[0]%450, dpos[1]*45) -\
+                (min(self.pos[0]%450, dpos[1]*45))
+                length = 2*buf + max(self.pos[1], dpos[2]*45) - min(self.pos[1],
+                        dpos[2]*45)
+                regions.append([x, y, width, length])
         return regions
 
     def make_path_regions(self, path):
@@ -224,11 +244,23 @@ class UAVSprite(pygame.sprite.Sprite):
 
     def send_away(self, app):
         label = myfont.render('A',False,(0,0,0))
-        escp = get_escape()
+        escp = self.get_escape()
         escape_point = PointSprite((self.dpos[0],escp[0],
             escp[1]), 1, text=label)
         self.update_region(escape_point.dpos)
         self._gotoPoint(escape_point)
+
+    def get_escape(self):
+        point = escape_points.get()
+        escape_points.put(point)
+        if self.is_point_safe(point):
+            return point
+        else:
+            self.get_escape()
+
+    def is_point_safe(self, point):
+        return True
+
 
     def update(self):
         for layer in range(len(self.region_rect)):
@@ -262,8 +294,8 @@ class App:
         pygame.display.flip()
 
     def make_env(self):
-        self.layer_1 = myfont.render('Layer 1', False, (0, 0, 0))
-        self.layer_2 = myfont.render('Layer 2', False, (0, 0, 0))
+        self.layer_1 = myfont.render('Altitude Layer 1', False, (0, 0, 0))
+        self.layer_2 = myfont.render('Altitude Layer 2', False, (0, 0, 0))
         self.display = pygame.display.set_mode(self.size,
                                                pygame.HWSURFACE |
                                                pygame.DOUBLEBUF)
@@ -324,8 +356,8 @@ class App:
                     [int(self.width/LAYERS), self.height], 5)
         self.display.blit(self.point_1.text, dpos2pos(self.point_1.dpos_text))
         self.display.blit(self.point_2.text, dpos2pos(self.point_2.dpos_text))
-        self.display.blit(self.layer_1, (350,635))
-        self.display.blit(self.layer_2, (800, 635))
+        self.display.blit(self.layer_1, (300,635))
+        self.display.blit(self.layer_2, (750, 635))
 
     def resolve_conflicts(self, conflicts):
         for conflict in conflicts:
@@ -337,17 +369,19 @@ class App:
         fixes = []
         if len(conflict) > 0:
             main_uav = self.uav_record["uav{}".format(conflict[0])]
+            temp_region = main_uav.region_rect
+            main_uav.shrink_regions()
             second_uav = self.uav_record["uav{}".format(conflict[2])]
             fixes.append(second_uav.shrink_regions)
             fixes.append(second_uav.send_away)
             fixes.append(second_uav.shrink_regions)
             i = 0
-            while(main_uav.collide(second_uav)):
+            while(_collide(temp_region, second_uav.region_rect)):
                 if i == 9:
                     sys.quit()
                 fixes[i%2](self)
                 i += 1
-                print i
+            main_uav.region_rect = temp_region
 
     def show(self):
         self.reset_map()
@@ -380,18 +414,15 @@ class App:
     def exec_plan(self, plan):
         conflicts = []
         for uav in UAVS:
-            print self.uav_record[uav].IDn
             self.uav_record[uav].setLayer(plan[uav][-1])
             plan[uav].pop()
             self.uav_record[uav].gotoPoint(plan[uav][-1])
             plan[uav].pop()
             conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1]))
             plan[uav].pop()
-            self.show()
-            print conflicts
         if len(conflicts)>0:
             self.resolve_conflicts(conflicts)
-
+        #self.show()
     def on_execute(self):
         if self.on_init() == False:
             self._running = False
@@ -409,8 +440,6 @@ class App:
                                   uav1_2_collide)
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
-            print inputs
-            print outputs
             plan = self.plan_mission(outputs)
             self.exec_plan(plan)
             sleep(.1)
