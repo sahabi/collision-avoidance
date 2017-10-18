@@ -5,7 +5,7 @@ from time import sleep
 from Controller_4 import Controller_4 as Ca_4
 from pygame import Rect
 import sys
-
+from Queue import Queue
 ctrl = Ca_4()
 
 BLACK = (0, 0, 0)
@@ -20,6 +20,16 @@ UAVS = []
 pygame.init()
 pygame.font.init()
 myfont = pygame.font.SysFont('Comic Sans MS', 22)
+escape_points = Queue(maxsize=6)
+escape_points.put((1,1))
+escape_points.put((2,1))
+escape_points.put((5,5))
+escape_points.put((4,11))
+
+def get_escape():
+    point = escape_points.get()
+    escape_points.put(point)
+    return point
 
 for i in range(N_UAVS):
     UAVS.append('uav{}'.format(i))
@@ -68,7 +78,7 @@ escape_point = PointSprite((1, 0, 0), 0, loc_e)
 
 class UAVSprite(pygame.sprite.Sprite):
 
-    def __init__(self, dpos, color, display, ID, IDn):
+    def __init__(self, dpos, color, display, ID, IDn, escape_point= (1, 1)):
         pygame.sprite.Sprite.__init__(self)
         self.src_image = pygame.image.load("assets/uav.png")
         self.dpos = dpos
@@ -84,7 +94,7 @@ class UAVSprite(pygame.sprite.Sprite):
         self.region_rect = self.make_regions(self.dpos)
         self.path_region = []
         esc_label = myfont.render(ID, False, (0,0,0))
-        self.escape_point = (5, 9)
+        self.escape_point = escape_point
 
     def move(self, action):
         l, x, y = self.dpos
@@ -106,7 +116,7 @@ class UAVSprite(pygame.sprite.Sprite):
             self.dpos = dpos
             self.pos = dpos2pos(self.dpos)
         else:
-            print("FAIL")
+           sys.quit()
 
     def in_region(self, dpos):
         return True
@@ -119,37 +129,34 @@ class UAVSprite(pygame.sprite.Sprite):
                 else:
                     return False
 
-    def region_intersects(self, app):
+    def region_intersects(self, point):
         for uav in UAVS:
-            uav_o = app.uav_record[uav]
+            uav_o = theApp.uav_record[uav]
             if self.ID == uav_o.ID:
                 continue
-            if self.collide(uav_o):
+            if self.collide(uav_o) and point[0] == uav_o.dpos[0]:
                 return uav_o
         return False
 
-    def _gotoPoint(self, point, app):
-        print("the point", point)
+    def _gotoPoint(self, point):
         path = self.get_path(point.dpos)
-        print("the path", path)
         for point in path:
             self.set_dpos(point)
-            app.show()
+            theApp.show()
             sleep(.1)
 
-    def gotoPoint(self, point, app):
+    def gotoPoint(self, point):
         if point[4] == 'N':
             return
         if point[4] == 'A':
-            point = app.point_record['point1']
+            point = theApp.point_record['point1']
         elif point[4] == 'B':
-            point = app.point_record['point2']
-        self._gotoPoint(point, app)
+            point = theApp.point_record['point2']
+        self._gotoPoint(point)
 
     def get_path(self, dpos):
         xsteps = self.dpos[1] - dpos[1]
         ysteps = self.dpos[2] - dpos[2]
-        print(xsteps,ysteps)
         if xsteps < 0:
             xpoints = [self.dpos[1] + i + 1 for i in range(abs(xsteps))]
         elif xsteps > 0:
@@ -173,7 +180,8 @@ class UAVSprite(pygame.sprite.Sprite):
         points = zip(zpoints, xpoints, ypoints)
         return points
 
-    def setIntent(self, intent, app):
+    def setIntent(self, intent):
+        app = theApp
         conflict = ""
         if intent[4] == 'N':
             return
@@ -182,22 +190,22 @@ class UAVSprite(pygame.sprite.Sprite):
         elif intent[4] == 'B':
             point = app.point_record['point2']
         path = self.get_path(point.dpos)
-        self.path_region = self.make_path_regions(path)
-        self.update_region(point.dpos, app)
-        if self.region_intersects(app):
-            conflict = "{}_{}".format(self.IDn, self.region_intersects(app).IDn)
-            print("FAIL: UAV {} intersects with {}".format(self.ID,
-                self.region_intersects(app).ID))
+        #self.path_region = self.make_path_regions(path)
+        self.update_region(point.dpos)
+        if self.region_intersects(point.dpos):
+            conflict = "{}_{}".format(self.IDn,
+                                      self.region_intersects(point.dpos).IDn)
         sleep(.1)
         return conflict
 
     def make_regions(self, dpos):
+        buf = 20
         regions = []
         for layer in range(LAYERS):
-            x = layer*450 + (min(self.pos[0]%450, dpos[1]*45)) - 30
-            y = min(self.pos[1], dpos[2]*45) - 30
-            width = 60 + max(self.pos[0]%450, dpos[1]*45) - (min(self.pos[0]%450, dpos[1]*45))
-            length = 60 + max(self.pos[1], dpos[2]*45) - min(self.pos[1],
+            x = layer*450 + (min(self.pos[0]%450, dpos[1]*45)) - buf
+            y = min(self.pos[1], dpos[2]*45) - buf
+            width = 2*buf + max(self.pos[0]%450, dpos[1]*45) - (min(self.pos[0]%450, dpos[1]*45))
+            length = 2*buf + max(self.pos[1], dpos[2]*45) - min(self.pos[1],
                     dpos[2]*45)
             regions.append([x, y, width, length])
         return regions
@@ -208,46 +216,40 @@ class UAVSprite(pygame.sprite.Sprite):
             regions.append(self.make_unit_region(point))
         return regions
 
-
     def make_unit_region(self, dpos):
         return [dpos[0]*450+dpos[1]*45 - 30, dpos[2]*45 - 30, 60, 60]
 
     def shrink_regions(self, app=None):
-        self.region_rect = self.make_regions(self.dpos)
+        self.update_region(self.dpos)
 
     def send_away(self, app):
-        print("sending away")
         label = myfont.render('A',False,(0,0,0))
-        escape_point = PointSprite((self.dpos[0],self.escape_point[0],
-            self.escape_point[1]), 1, text=label)
-        self._gotoPoint(escape_point, app)
+        escp = get_escape()
+        escape_point = PointSprite((self.dpos[0],escp[0],
+            escp[1]), 1, text=label)
+        self.update_region(escape_point.dpos)
+        self._gotoPoint(escape_point)
 
     def update(self):
         for layer in range(len(self.region_rect)):
-            pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
-        #for region in self.path_region:
-        #    pygame.draw.rect(self.display, self.color,
-        #            region, 2)
+            if layer == self.dpos[0]:
+                pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
         self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
 
-    def update_region(self, dpos, app, color = None):
+    def update_region(self, dpos, color = None):
         self.region_rect = []
         regions = self.make_regions(dpos)
         for layer in range(LAYERS):
             self.region_rect.append(regions[layer])
             self.region_rect[layer]
-            pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
+            if layer == self.dpos[0]:
+                pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
+        theApp.show()
 
     def get_layer(self):
         return self.discrete[0]
-
-    def get_pos(self):
-        for pos in POS_LIST:
-            if is_in(self.rect.center, pos.rect.center):
-                return pos.label
-        return 0
 
 class App:
     def __init__(self):
@@ -275,9 +277,12 @@ class App:
                          [int(self.width/LAYERS), self.height], 5)
         rect = self.display.get_rect()
 
-        self.uav_0 = UAVSprite((0, 7, 12), BLACK, self.display, "black", 0)
-        self.uav_1 = UAVSprite((0, 2, 12), PURPLE, self.display, "purple", 1)
-        self.uav_2 = UAVSprite((1, 8, 3), GREEN, self.display, "green", 2)
+        self.uav_0 = UAVSprite((0, 7, 12), BLACK, self.display, "black", 0,
+                               (4,10) )
+        self.uav_1 = UAVSprite((0, 2, 12), PURPLE, self.display, "purple", 1,
+                               (4, 10))
+        self.uav_2 = UAVSprite((1, 8, 3), GREEN, self.display, "green", 2, (4,
+                                                                           10))
         self.uav_record = {
             'uav0': self.uav_0,
             'uav1': self.uav_1,
@@ -335,21 +340,23 @@ class App:
             second_uav = self.uav_record["uav{}".format(conflict[2])]
             fixes.append(second_uav.shrink_regions)
             fixes.append(second_uav.send_away)
+            fixes.append(second_uav.shrink_regions)
             i = 0
             while(main_uav.collide(second_uav)):
-                if i == 6:
+                if i == 9:
                     sys.quit()
                 fixes[i%2](self)
                 i += 1
+                print i
 
     def show(self):
         self.reset_map()
-        self.uav_group.update()
-        self.uav_group.clear(self.display,self.background)
-        self.uav_group.draw(self.display)
         self.point_group.update()
         self.point_group.clear(self.display,self.background)
         self.point_group.draw(self.display)
+        self.uav_group.update()
+        self.uav_group.clear(self.display,self.background)
+        self.uav_group.draw(self.display)
         pygame.display.flip()
         sleep(0.1)
 
@@ -373,14 +380,15 @@ class App:
     def exec_plan(self, plan):
         conflicts = []
         for uav in UAVS:
+            print self.uav_record[uav].IDn
             self.uav_record[uav].setLayer(plan[uav][-1])
             plan[uav].pop()
-            self.uav_record[uav].gotoPoint(plan[uav][-1], self)
+            self.uav_record[uav].gotoPoint(plan[uav][-1])
             plan[uav].pop()
-            conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1],
-                self))
+            conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1]))
             plan[uav].pop()
             self.show()
+            print conflicts
         if len(conflicts)>0:
             self.resolve_conflicts(conflicts)
 
@@ -401,6 +409,8 @@ class App:
                                   uav1_2_collide)
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
+            print inputs
+            print outputs
             plan = self.plan_mission(outputs)
             self.exec_plan(plan)
             sleep(.1)
