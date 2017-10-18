@@ -441,6 +441,8 @@ class App:
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
             plan = self.plan_mission(outputs)
+            print outputs
+            print inputs
             self.exec_plan(plan)
             sleep(.1)
 
