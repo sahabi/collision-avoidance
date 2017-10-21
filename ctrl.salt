@@ -1,23 +1,14 @@
 controller Controller_4 where
 
 enum Pos = None | A | B | C | D | E 
-enum Layer = First | Second | Third
+enum Layer = First | Second | Third | Forth
 
 input uav0_1_collide : Bool =  False
 input uav0_2_collide : Bool =  False
 input uav0_3_collide : Bool =  False
-input uav0_4_collide : Bool =  False
-input uav0_5_collide : Bool =  False
 input uav1_2_collide : Bool =  False
 input uav1_3_collide : Bool =  False
-input uav1_4_collide : Bool =  False
-input uav1_5_collide : Bool =  False
 input uav2_3_collide : Bool =  False
-input uav2_4_collide : Bool =  False
-input uav2_5_collide : Bool =  False
-input uav3_4_collide : Bool =  False
-input uav3_5_collide : Bool =  False
-input uav4_5_collide : Bool =  False
 
 
 output uav0_layer : Layer
@@ -32,56 +23,46 @@ output uav2_intent : Pos = None
 output uav3_layer : Layer
 output uav3_goto : Pos = None
 output uav3_intent : Pos = None
-output uav4_layer : Layer
-output uav4_goto : Pos = None
-output uav4_intent : Pos = None
-output uav5_layer : Layer
-output uav5_goto : Pos = None
-output uav5_intent : Pos = None
 
 
 env_trans
 
-  !(uav0_1_collide /\ uav0_2_collide /\ uav0_3_collide /\ uav0_4_collide /\ uav0_5_collide /\ uav1_2_collide /\ uav1_3_collide /\ uav1_4_collide /\ uav1_5_collide /\ uav2_3_collide /\ uav2_4_collide /\ uav2_5_collide /\ uav3_4_collide /\ uav3_5_collide /\ uav4_5_collide)
+  !(uav0_1_collide /\ uav0_2_collide /\ uav0_3_collide /\ uav1_2_collide /\ uav1_3_collide /\ uav2_3_collide)
 
 
 sys_trans
 
   uav0_layer == First -> (uav0_goto == A \/ uav0_goto == None)
 
-  uav0_layer == Second -> (uav0_goto == B \/ uav0_goto == C \/ uav0_goto == None)
+  uav0_layer == Second -> (uav0_goto == B \/ uav0_goto == None)
 
-  uav0_layer == Third -> (uav0_goto == D \/ uav0_goto == E \/ uav0_goto == None)
+  uav0_layer == Third -> (uav0_goto == C \/ uav0_goto == D \/ uav0_goto == None)
+
+  uav0_layer == Forth -> (uav0_goto == E \/ uav0_goto == None)
 
   uav1_layer == First -> (uav1_goto == A \/ uav1_goto == None)
 
-  uav1_layer == Second -> (uav1_goto == B \/ uav1_goto == C \/ uav1_goto == None)
+  uav1_layer == Second -> (uav1_goto == B \/ uav1_goto == None)
 
-  uav1_layer == Third -> (uav1_goto == D \/ uav1_goto == E \/ uav1_goto == None)
+  uav1_layer == Third -> (uav1_goto == C \/ uav1_goto == D \/ uav1_goto == None)
+
+  uav1_layer == Forth -> (uav1_goto == E \/ uav1_goto == None)
 
   uav2_layer == First -> (uav2_goto == A \/ uav2_goto == None)
 
-  uav2_layer == Second -> (uav2_goto == B \/ uav2_goto == C \/ uav2_goto == None)
+  uav2_layer == Second -> (uav2_goto == B \/ uav2_goto == None)
 
-  uav2_layer == Third -> (uav2_goto == D \/ uav2_goto == E \/ uav2_goto == None)
+  uav2_layer == Third -> (uav2_goto == C \/ uav2_goto == D \/ uav2_goto == None)
+
+  uav2_layer == Forth -> (uav2_goto == E \/ uav2_goto == None)
 
   uav3_layer == First -> (uav3_goto == A \/ uav3_goto == None)
 
-  uav3_layer == Second -> (uav3_goto == B \/ uav3_goto == C \/ uav3_goto == None)
+  uav3_layer == Second -> (uav3_goto == B \/ uav3_goto == None)
 
-  uav3_layer == Third -> (uav3_goto == D \/ uav3_goto == E \/ uav3_goto == None)
+  uav3_layer == Third -> (uav3_goto == C \/ uav3_goto == D \/ uav3_goto == None)
 
-  uav4_layer == First -> (uav4_goto == A \/ uav4_goto == None)
-
-  uav4_layer == Second -> (uav4_goto == B \/ uav4_goto == C \/ uav4_goto == None)
-
-  uav4_layer == Third -> (uav4_goto == D \/ uav4_goto == E \/ uav4_goto == None)
-
-  uav5_layer == First -> (uav5_goto == A \/ uav5_goto == None)
-
-  uav5_layer == Second -> (uav5_goto == B \/ uav5_goto == C \/ uav5_goto == None)
-
-  uav5_layer == Third -> (uav5_goto == D \/ uav5_goto == E \/ uav5_goto == None)
+  uav3_layer == Forth -> (uav3_goto == E \/ uav3_goto == None)
 
   uav0_1_collide -> uav0_layer != uav1_layer
 
@@ -89,17 +70,9 @@ sys_trans
 
   uav0_3_collide -> uav0_layer != uav3_layer
 
-  uav0_4_collide -> uav0_layer != uav4_layer
+  uav1_3_collide -> uav1_layer != uav3_layer
 
-  uav0_5_collide -> uav0_layer != uav5_layer
-
-  uav1_5_collide -> uav1_layer != uav5_layer
-
-  uav2_5_collide -> uav2_layer != uav5_layer
-
-  uav3_5_collide -> uav3_layer != uav5_layer
-
-  uav4_5_collide -> uav4_layer != uav5_layer
+  uav2_3_collide -> uav2_layer != uav3_layer
 
   uav0_goto' == A -> uav0_intent == A
 
@@ -140,26 +113,6 @@ sys_trans
   uav3_goto' == D -> uav3_intent == D
 
   uav3_goto' == E -> uav3_intent == E
-
-  uav4_goto' == A -> uav4_intent == A
-
-  uav4_goto' == B -> uav4_intent == B
-
-  uav4_goto' == C -> uav4_intent == C
-
-  uav4_goto' == D -> uav4_intent == D
-
-  uav4_goto' == E -> uav4_intent == E
-
-  uav5_goto' == A -> uav5_intent == A
-
-  uav5_goto' == B -> uav5_intent == B
-
-  uav5_goto' == C -> uav5_intent == C
-
-  uav5_goto' == D -> uav5_intent == D
-
-  uav5_goto' == E -> uav5_intent == E
 
 
 
@@ -222,33 +175,3 @@ sys_liveness
 
 sys_liveness
   uav3_goto' == E
-
-sys_liveness
-  uav4_goto' == A
-
-sys_liveness
-  uav4_goto' == B
-
-sys_liveness
-  uav4_goto' == C
-
-sys_liveness
-  uav4_goto' == D
-
-sys_liveness
-  uav4_goto' == E
-
-sys_liveness
-  uav5_goto' == A
-
-sys_liveness
-  uav5_goto' == B
-
-sys_liveness
-  uav5_goto' == C
-
-sys_liveness
-  uav5_goto' == D
-
-sys_liveness
-  uav5_goto' == E

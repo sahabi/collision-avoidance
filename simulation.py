@@ -15,8 +15,8 @@ PURPLE = (120, 78, 240)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 200, 0)
-LAYERS = 2
-N_UAVS = 3
+LAYERS = 4
+N_UAVS = 5
 UAVS = []
 pygame.init()
 pygame.font.init()
@@ -308,7 +308,8 @@ class App:
                          [int(self.width/LAYERS), 0],
                          [int(self.width/LAYERS), self.height], 5)
         rect = self.display.get_rect()
-
+        
+        self.uavs.append(
         self.uav_0 = UAVSprite((0, 7, 12), BLACK, self.display, "black", 0,
                                (4,10) )
         self.uav_1 = UAVSprite((0, 2, 12), PURPLE, self.display, "purple", 1,
@@ -441,8 +442,6 @@ class App:
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
             plan = self.plan_mission(outputs)
-            print outputs
-            print inputs
             self.exec_plan(plan)
             sleep(.1)
 

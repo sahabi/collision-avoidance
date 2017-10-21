@@ -1,21 +1,19 @@
 from jinja2 import Template, Environment, FileSystemLoader
 
-env = Environment(loader=FileSystemLoader('/home/sahabi/projects/collision_avoidance/'))
+env = Environment(loader=FileSystemLoader(''))
 
 template = env.get_template('ltl_temp.tl')
 
-points = ['A','B','C','D','E','F','G','H','I']
 
-layer_loc = {0:['A'], 1:['B','C'], 2:['D','E']}
+layer_loc = {0:['A'], 1:['B'], 2:['C','D'], 3:['E']}
 
-rlayers = ['First', 'Second', 'Third']
+rlayers = ['First', 'Second', 'Third', 'Forth']
 
-n_layers = 3
+n_layers = 4
 n_locations = 5
-n_uavs = 6
+n_uavs = 4
 locations = []
-
-
+points = [chr(i + 97).upper() for i in range(n_locations)]
 locations += ["None"]
 layers = []
 layers += "First"
