@@ -6,7 +6,7 @@ from Controller_4 import Controller_4 as Ca_4
 from pygame import Rect
 import sys
 from Queue import Queue
-
+import copy
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 PURPLE = (120, 78, 240)
@@ -21,7 +21,7 @@ def color_surface(surface, color):
     arr[:,:,2] = color[2]
 
 def dpos2pos(dpos):
-    return (dpos[0]*L_WIDTH + dpos[1]*L_WIDTH/10., dpos[2]*L_LENGTH)
+    return (dpos[0]*L_WIDTH + dpos[1]*L_WIDTH/10., dpos[2]*L_LENGTH/15.)
 
 def _collide(rect1, rect2):
     for layer1 in range(n_layers):
@@ -71,6 +71,7 @@ class UAVSprite(pygame.sprite.Sprite):
         self.display = display
         self.region_rect = self.make_regions(self.dpos)
         self.path_region = []
+        self.image = pygame.transform.rotate(self.src_image, 0)
 
     def move(self, action):
         l, x, y = self.dpos
@@ -103,6 +104,7 @@ class UAVSprite(pygame.sprite.Sprite):
             self.set_dpos(point)
             theApp.show()
             sleep(.1)
+        self.shrink_regions()
 
     def gotoPoint(self, point):
         if point[4] == 'N':
@@ -147,6 +149,8 @@ class UAVSprite(pygame.sprite.Sprite):
         if self.region_intersects(point.dpos[0]):
             conflict = "{}_{}".format(self.IDn,
                                       self.region_intersects(point.dpos[0]).IDn)
+            print self.label, self.IDn,
+            self.region_intersects(point.dpos[0]).label, self.region_intersects(point.dpos[0]).IDn
         sleep(.1)
         return conflict
 
@@ -155,13 +159,16 @@ class UAVSprite(pygame.sprite.Sprite):
         regions = []
         if not path:
             for layer in range(n_layers):
-                x = layer*L_WIDTH + (min(self.pos[0]%L_WIDTH, dpos[1]*L_LENGTH)) - buf
+                x = layer*L_WIDTH + (min(self.pos[0]%L_WIDTH,
+                                         dpos[1]*L_LENGTH/15.)) - buf
                 y = min(self.pos[1], dpos[2]*46) - buf
-                width = 2*buf + max(self.pos[0]%466, dpos[1]*46) -\
-                (min(self.pos[0]%466, dpos[1]*46))
-                length = 2*buf + max(self.pos[1], dpos[2]*46) - min(self.pos[1],
-                        dpos[2]*46)
+                width = 2*buf + max(self.pos[0]%L_WIDTH, dpos[1]*L_WIDTH/10.) -\
+                (min(self.pos[0]%L_WIDTH, dpos[1]*L_WIDTH/10.))
+                length = 2*buf + max(self.pos[1], dpos[2]*L_WIDTH/10.) - min(self.pos[1],
+                        dpos[2]*L_LENGTH/15.)
                 regions.append([x, y, width, length])
+        #if self.label == 'green':
+        #    print regions[0], x,y
         return regions
 
     #def make_path_regions(self, path):
@@ -181,8 +188,8 @@ class UAVSprite(pygame.sprite.Sprite):
         escp = self.get_escape()
         escape_point = PointSprite((self.dpos[0],escp[0],
             escp[1]), 1, text=label)
-        self.update_region(escape_point.dpos)
         self._gotoPoint(escape_point)
+        self.update_region(escape_point.dpos)
 
     def get_escape(self):
         point = escape_points.get()
@@ -206,15 +213,14 @@ class UAVSprite(pygame.sprite.Sprite):
                     return False
 
     def region_intersects(self,layer,goto=None):
-        if not goto is None:
-            self.region_rect = self.make_regions((layer,goto[0],goto[1]))
+        #if not goto is None:
+        #    self.region_rect = self.make_regions((layer,goto[0],goto[1]))
         for uav in theApp.uav_record.keys():
             uav_o = theApp.uav_record[uav]
             if self.label == uav_o.label:
                 continue
             else:
                 if self.collide(uav_o) and layer == uav_o.dpos[0]:
-                    uav_o.send_away()
                     return uav_o
         return False
 
@@ -222,8 +228,9 @@ class UAVSprite(pygame.sprite.Sprite):
     def update(self):
         for layer in range(len(self.region_rect)):
             if layer == self.dpos[0]:
+                #if self.label == 'green':
+                #    print self.region_rect[layer],self.dpos
                 pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
-        self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
 
@@ -232,10 +239,6 @@ class UAVSprite(pygame.sprite.Sprite):
         regions = self.make_regions(dpos)
         for layer in range(n_layers):
             self.region_rect.append(regions[layer])
-            self.region_rect[layer]
-            if layer == self.dpos[0]:
-                pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
-        theApp.show()
 
 class App:
     def __init__(self, n_uavs, n_layers, n_locations):
@@ -322,9 +325,11 @@ class App:
 
     def resolve_conflict(self, conflict):
         fixes = []
+        print conflict
         if len(conflict) > 0:
             main_uav = self.uav_record["uav{}".format(conflict[0])]
-            temp_region = main_uav.region_rect
+            temp_region = copy.copy(main_uav.region_rect)
+            main_uav.update_region(main_uav.dpos)
             main_uav.shrink_regions()
             second_uav = self.uav_record["uav{}".format(conflict[2])]
             fixes.append(second_uav.shrink_regions)
@@ -334,9 +339,10 @@ class App:
             while(_collide(temp_region, second_uav.region_rect)):
                 if i == 90:
                     sys.quit()
-                fixes[i%2](self)
-                i += 1
-            main_uav.region_rect = temp_region
+                fixes[0]()
+                fixes[1]()
+                fixes[2]()
+            #main_uav.region_rect = temp_region
 
     def show(self):
         self.reset_map()
@@ -353,8 +359,11 @@ class App:
         plan = {}
         for uav in self.uav_record.keys():
             plan[uav] = []
+        for uav in self.uav_record.keys():
             plan[uav].append('{}'.format(ctrl_output[uav+"_intent"]))
+        for uav in self.uav_record.keys():
             plan[uav].append('{}'.format(ctrl_output[uav+"_goto"]))
+        for uav in self.uav_record.keys():
             plan[uav].append('{}'.format(ctrl_output[uav+"_layer"]))
         return plan
 
@@ -363,8 +372,10 @@ class App:
         for uav in self.uav_record.keys():
             self.uav_record[uav].setLayer(plan[uav][-1])
             plan[uav].pop()
+        for uav in self.uav_record.keys():
             self.uav_record[uav].gotoPoint(plan[uav][-1])
             plan[uav].pop()
+        for uav in self.uav_record.keys():
             conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1]))
             plan[uav].pop()
         if len(conflicts)>0:
@@ -388,7 +399,6 @@ class App:
                         self.uavs[i].collide(self.uavs[j])
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
-            print outputs
             plan = self.plan_mission(outputs)
             self.exec_plan(plan)
             sleep(.1)
@@ -402,7 +412,7 @@ if __name__ == "__main__" :
     WIDTH = 1400
     LENGTH = 700
     L_WIDTH = 1400/float(n_layers)
-    L_LENGTH = 700/15.
+    L_LENGTH = 700
     keys = ['uav'+str(i) for i in range(n_uavs)]
     uav_props = {'init':None,'color':None,'label':None,'id':None}
     uavs = {key:{'init':None,'color':None,'label':None,'id':None} for key in keys}
