@@ -5,12 +5,12 @@ env = Environment(loader=FileSystemLoader(''))
 template = env.get_template('ltl_temp.tl')
 
 
-layer_loc = {0:['A'], 1:['B'], 2:['C','D'], 3:['E']}
+layer_loc = {0:['A'], 1:['B'], 2:['C','D']}
 
-rlayers = ['First', 'Second', 'Third', 'Forth']
+rlayers = ['First', 'Second', 'Third']
 
-n_layers = 4
-n_locations = 5
+n_layers = 3
+n_locations = 4
 n_uavs = 4
 locations = []
 points = [chr(i + 97).upper() for i in range(n_locations)]
@@ -42,9 +42,9 @@ for i in range(n_uavs):
 tmpinput["inputs"] = "".join(input_string)
 
 output_string = []
-
+layers = ['First', 'Second', 'Third', 'Third']
 for i in range(n_uavs):
-    output_string += ["output uav{}_layer : Layer\n".format(i)]
+    output_string += ["output uav{}_layer : Layer = {}\n".format(i,layers[i])]
     output_string += ["output uav{}_goto : Pos = None\n".format(i)]
     output_string += ["output uav{}_intent : Pos = None\n".format(i)]
 
@@ -62,6 +62,7 @@ for i in range(n_uavs):
 
 tmpinput["env_trans"] = [spec]
 
+#the layer/location relationship
 specs = []
 spec = ''
 for i in range(n_uavs):
@@ -77,18 +78,33 @@ for i in range(n_uavs):
         spec = lh + rh
         specs += [spec]
 
+#must not be in the same layer if they collide
 for i in range(n_uavs):
     for j in range(j,n_uavs):
         if i != j:
-            spec = '  uav{i}_{j}_collide -> uav{i}_layer != uav{j}_layer'.format(i=i,j=j)
+            spec = '  uav{z}_{r}_collide -> uav{z}_layer != uav{r}_layer'.format(z=i,r=j)
             specs += [spec]
 
+#the intention/goto relationship
 for i in range(n_uavs):
     for j in range(n_locations):
-        spec = "  uav{i}_goto' == {j} -> uav{i}_intent == {j}".format(i=i,
-                                                                    j=points[j])
+        spec = "  uav{i}_goto' == {j} -> uav{i}_intent == {j}".format(i=i, j=points[j])
         specs += [spec]
 
+
+for i in range(n_uavs):
+    for j in range(1,n_layers-1):
+        spec = """  uav{i}_layer == {j} -> uav{i}_layer' ==\
+ {j}""".format(i=i,j=rlayers[j])
+        spec += """ \/ uav{i}_layer' == {ju} \/ uav{i}_layer' ==\
+ {jd}""".format(i=i,ju=rlayers[j+1], jd=rlayers[j-1])
+        specs += [spec]
+    spec = """  uav{i}_layer == First -> uav{i}_layer' == First \/ uav{i}_layer' ==\
+ Second""".format(i=i)
+    specs += [spec]
+    spec = """  uav{i}_layer == {layer} -> uav{i}_layer' == {layer} \/\
+ uav{i}_layer' == {layerd}""".format(i=i, layer=rlayers[-1], layerd=rlayers[-2])
+    specs += [spec]
 
 sys_trans_strings = specs
 tmpinput["sys_trans"] = sys_trans_strings

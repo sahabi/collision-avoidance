@@ -6,7 +6,7 @@ controller {{controller_name}} where
 
 {{outputs}}
 
-env_trans
+env_liveness
 {% for env_tran in env_trans%}
 {{env_tran}}
 {% endfor %}

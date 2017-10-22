@@ -1,7 +1,7 @@
 controller Controller_4 where
 
-enum Pos = None | A | B | C | D | E 
-enum Layer = First | Second | Third | Forth
+enum Pos = None | A | B | C | D 
+enum Layer = First | Second | Third
 
 input uav0_1_collide : Bool =  False
 input uav0_2_collide : Bool =  False
@@ -11,21 +11,21 @@ input uav1_3_collide : Bool =  False
 input uav2_3_collide : Bool =  False
 
 
-output uav0_layer : Layer
+output uav0_layer : Layer = First
 output uav0_goto : Pos = None
 output uav0_intent : Pos = None
-output uav1_layer : Layer
+output uav1_layer : Layer = Second
 output uav1_goto : Pos = None
 output uav1_intent : Pos = None
-output uav2_layer : Layer
+output uav2_layer : Layer = Third
 output uav2_goto : Pos = None
 output uav2_intent : Pos = None
-output uav3_layer : Layer
+output uav3_layer : Layer = Third
 output uav3_goto : Pos = None
 output uav3_intent : Pos = None
 
 
-env_trans
+env_liveness
 
   !(uav0_1_collide /\ uav0_2_collide /\ uav0_3_collide /\ uav1_2_collide /\ uav1_3_collide /\ uav2_3_collide)
 
@@ -38,15 +38,11 @@ sys_trans
 
   uav0_layer == Third -> (uav0_goto == C \/ uav0_goto == D \/ uav0_goto == None)
 
-  uav0_layer == Forth -> (uav0_goto == E \/ uav0_goto == None)
-
   uav1_layer == First -> (uav1_goto == A \/ uav1_goto == None)
 
   uav1_layer == Second -> (uav1_goto == B \/ uav1_goto == None)
 
   uav1_layer == Third -> (uav1_goto == C \/ uav1_goto == D \/ uav1_goto == None)
-
-  uav1_layer == Forth -> (uav1_goto == E \/ uav1_goto == None)
 
   uav2_layer == First -> (uav2_goto == A \/ uav2_goto == None)
 
@@ -54,15 +50,11 @@ sys_trans
 
   uav2_layer == Third -> (uav2_goto == C \/ uav2_goto == D \/ uav2_goto == None)
 
-  uav2_layer == Forth -> (uav2_goto == E \/ uav2_goto == None)
-
   uav3_layer == First -> (uav3_goto == A \/ uav3_goto == None)
 
   uav3_layer == Second -> (uav3_goto == B \/ uav3_goto == None)
 
   uav3_layer == Third -> (uav3_goto == C \/ uav3_goto == D \/ uav3_goto == None)
-
-  uav3_layer == Forth -> (uav3_goto == E \/ uav3_goto == None)
 
   uav0_1_collide -> uav0_layer != uav1_layer
 
@@ -82,8 +74,6 @@ sys_trans
 
   uav0_goto' == D -> uav0_intent == D
 
-  uav0_goto' == E -> uav0_intent == E
-
   uav1_goto' == A -> uav1_intent == A
 
   uav1_goto' == B -> uav1_intent == B
@@ -91,8 +81,6 @@ sys_trans
   uav1_goto' == C -> uav1_intent == C
 
   uav1_goto' == D -> uav1_intent == D
-
-  uav1_goto' == E -> uav1_intent == E
 
   uav2_goto' == A -> uav2_intent == A
 
@@ -102,8 +90,6 @@ sys_trans
 
   uav2_goto' == D -> uav2_intent == D
 
-  uav2_goto' == E -> uav2_intent == E
-
   uav3_goto' == A -> uav3_intent == A
 
   uav3_goto' == B -> uav3_intent == B
@@ -112,7 +98,29 @@ sys_trans
 
   uav3_goto' == D -> uav3_intent == D
 
-  uav3_goto' == E -> uav3_intent == E
+  uav0_layer == Second -> uav0_layer' == Second \/ uav0_layer' == Third \/ uav0_layer' == First
+
+  uav0_layer == First -> uav0_layer' == First \/ uav0_layer' == Second
+
+  uav0_layer == Third -> uav0_layer' == Third \/ uav0_layer' == Second
+
+  uav1_layer == Second -> uav1_layer' == Second \/ uav1_layer' == Third \/ uav1_layer' == First
+
+  uav1_layer == First -> uav1_layer' == First \/ uav1_layer' == Second
+
+  uav1_layer == Third -> uav1_layer' == Third \/ uav1_layer' == Second
+
+  uav2_layer == Second -> uav2_layer' == Second \/ uav2_layer' == Third \/ uav2_layer' == First
+
+  uav2_layer == First -> uav2_layer' == First \/ uav2_layer' == Second
+
+  uav2_layer == Third -> uav2_layer' == Third \/ uav2_layer' == Second
+
+  uav3_layer == Second -> uav3_layer' == Second \/ uav3_layer' == Third \/ uav3_layer' == First
+
+  uav3_layer == First -> uav3_layer' == First \/ uav3_layer' == Second
+
+  uav3_layer == Third -> uav3_layer' == Third \/ uav3_layer' == Second
 
 
 
@@ -129,9 +137,6 @@ sys_liveness
   uav0_goto' == D
 
 sys_liveness
-  uav0_goto' == E
-
-sys_liveness
   uav1_goto' == A
 
 sys_liveness
@@ -142,9 +147,6 @@ sys_liveness
 
 sys_liveness
   uav1_goto' == D
-
-sys_liveness
-  uav1_goto' == E
 
 sys_liveness
   uav2_goto' == A
@@ -159,9 +161,6 @@ sys_liveness
   uav2_goto' == D
 
 sys_liveness
-  uav2_goto' == E
-
-sys_liveness
   uav3_goto' == A
 
 sys_liveness
@@ -172,6 +171,3 @@ sys_liveness
 
 sys_liveness
   uav3_goto' == D
-
-sys_liveness
-  uav3_goto' == E

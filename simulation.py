@@ -7,28 +7,12 @@ from pygame import Rect
 import sys
 from Queue import Queue
 
-ctrl = Ca_4()
-
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 PURPLE = (120, 78, 240)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 200, 0)
-LAYERS = 4
-N_UAVS = 5
-UAVS = []
-pygame.init()
-pygame.font.init()
-myfont = pygame.font.SysFont('Comic Sans MS', 22)
-escape_points = Queue(maxsize=6)
-escape_points.put((1,1))
-escape_points.put((8,1))
-escape_points.put((5,5))
-escape_points.put((4,11))
-
-for i in range(N_UAVS):
-    UAVS.append('uav{}'.format(i))
 
 def color_surface(surface, color):
     arr = pygame.surfarray.pixels3d(surface.src_image)
@@ -36,27 +20,16 @@ def color_surface(surface, color):
     arr[:,:,1] = color[1]
     arr[:,:,2] = color[2]
 
-def return_input(uav1_2_collide, uav1_3_collide,
-                uav2_3_collide):
-    return {
-        "uav1_2_collide": uav1_2_collide,
-        "uav1_3_collide": uav1_3_collide,
-        "uav2_3_collide": uav2_3_collide,
-    }
-
 def dpos2pos(dpos):
     return (dpos[0]*450 + dpos[1]*45, dpos[2]*45)
 
-
 def _collide(rect1, rect2):
-    for layer1 in range(LAYERS):
-        for layer2 in range(LAYERS):
+    for layer1 in range(n_layers):
+        for layer2 in range(n_layers):
             if Rect(rect1[layer1]).colliderect(Rect(rect2[layer2])):
                 return True
             else:
                 return False
-
-
 
 class PointSprite(pygame.sprite.Sprite):
 
@@ -80,7 +53,6 @@ class PointSprite(pygame.sprite.Sprite):
 
     __repr__ = __str__
 
-loc_e = myfont.render('E', False, (0, 0, 0))
 
 class UAVSprite(pygame.sprite.Sprite):
 
@@ -114,6 +86,7 @@ class UAVSprite(pygame.sprite.Sprite):
             y -= 1
         self.set_dpos(l, x, y)
 
+#fix this
     def setLayer(self, layer):
         self.set_dpos([0 if layer[6] == 'F' else 1, self.dpos[1], self.dpos[2]])
 
@@ -131,24 +104,17 @@ class UAVSprite(pygame.sprite.Sprite):
         rect1 = [rect for rect in self.region_rect]
         rect2 = [rect for rect in uav.region_rect]
         return _collid(rect1, rect2)
-        #for layer1 in range(LAYERS):
-        #    for layer2 in range(LAYERS):
-        #        if Rect(self.region_rect[layer1]).colliderect(Rect(uav.region_rect[layer2])):
-        #            return True
-        #        else:
-        #            return False
-
 
     def collide(self, uav):
-        for layer1 in range(LAYERS):
-            for layer2 in range(LAYERS):
+        for layer1 in range(n_layers):
+            for layer2 in range(n_layers):
                 if Rect(self.region_rect[layer1]).colliderect(Rect(uav.region_rect[layer2])):
                     return True
                 else:
                     return False
 
     def region_intersects(self, point):
-        for uav in UAVS:
+        for uav in theApp.uav_record.keys():
             uav_o = theApp.uav_record[uav]
             if self.ID == uav_o.ID:
                 continue
@@ -163,13 +129,11 @@ class UAVSprite(pygame.sprite.Sprite):
             theApp.show()
             sleep(.1)
 
+#fix this
     def gotoPoint(self, point):
         if point[4] == 'N':
             return
-        if point[4] == 'A':
-            point = theApp.point_record['point1']
-        elif point[4] == 'B':
-            point = theApp.point_record['point2']
+        point = theApp.point_record['point{}'.format(ord(point[4])-65)]
         self._gotoPoint(point)
 
     def get_path(self, dpos):
@@ -198,15 +162,15 @@ class UAVSprite(pygame.sprite.Sprite):
         points = zip(zpoints, xpoints, ypoints)
         return points
 
+#fix this
     def setIntent(self, intent):
         app = theApp
         conflict = ""
         if intent[4] == 'N':
             return
-        if intent[4] == 'A':
-            point = app.point_record['point1']
-        elif intent[4] == 'B':
-            point = app.point_record['point2']
+        print ord(intent[4])-65
+        point = app.point_record['point{}'.format(ord(intent[4])-65)]
+        print intent[4]
         path = self.get_path(point.dpos)
         #self.path_region = self.make_path_regions(path)
         self.update_region(point.dpos)
@@ -220,7 +184,7 @@ class UAVSprite(pygame.sprite.Sprite):
         buf = 20
         regions = []
         if not path:
-            for layer in range(LAYERS):
+            for layer in range(n_layers):
                 x = layer*450 + (min(self.pos[0]%450, dpos[1]*45)) - buf
                 y = min(self.pos[1], dpos[2]*45) - buf
                 width = 2*buf + max(self.pos[0]%450, dpos[1]*45) -\
@@ -269,11 +233,12 @@ class UAVSprite(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+        print self.dpos
 
     def update_region(self, dpos, color = None):
         self.region_rect = []
         regions = self.make_regions(dpos)
-        for layer in range(LAYERS):
+        for layer in range(n_layers):
             self.region_rect.append(regions[layer])
             self.region_rect[layer]
             if layer == self.dpos[0]:
@@ -284,18 +249,24 @@ class UAVSprite(pygame.sprite.Sprite):
         return self.discrete[0]
 
 class App:
-    def __init__(self):
+    def __init__(self, n_uavs, n_layers, n_locations):
         self._running = True
         self.display = None
-        self.size = self.width, self.height = 900, 700
+        self.n_uavs = n_uavs
+        self.n_layers = n_layers
+        self.n_locations = n_locations
+        self.layers = []
+        self.size = self.width, self.height = 1400, 700
 
     def on_init(self):
         self.make_env()
         pygame.display.flip()
 
+#fix this
     def make_env(self):
-        self.layer_1 = myfont.render('Altitude Layer 1', False, (0, 0, 0))
-        self.layer_2 = myfont.render('Altitude Layer 2', False, (0, 0, 0))
+        for i in range(self.n_layers):
+            self.layers.append(myfont.render('Altitude Layer {}'.format(i),
+                                             False, (0, 0, 0)))
         self.display = pygame.display.set_mode(self.size,
                                                pygame.HWSURFACE |
                                                pygame.DOUBLEBUF)
@@ -304,37 +275,28 @@ class App:
         self.background.fill((255, 255, 255))
         self._running = True
         self.display.fill((255, 255, 255))
-        pygame.draw.line(self.display, (100, 100, 100),
-                         [int(self.width/LAYERS), 0],
-                         [int(self.width/LAYERS), self.height], 5)
+        self.draw_alt_borders()
         rect = self.display.get_rect()
-        
-        self.uavs.append(
-        self.uav_0 = UAVSprite((0, 7, 12), BLACK, self.display, "black", 0,
-                               (4,10) )
-        self.uav_1 = UAVSprite((0, 2, 12), PURPLE, self.display, "purple", 1,
-                               (4, 10))
-        self.uav_2 = UAVSprite((1, 8, 3), GREEN, self.display, "green", 2, (4,
-                                                                           10))
-        self.uav_record = {
-            'uav0': self.uav_0,
-            'uav1': self.uav_1,
-            'uav2': self.uav_2
-        }
+        self.uav_record = {}
+        self.uavs = []
+        for key, value in uavs.iteritems():
+            uav_sprite = UAVSprite(value['init'], value['color'],
+                                   self.display, value['label'], i)
+            self.uav_record[key] = uav_sprite
+            self.uavs.append(uav_sprite)
+
         self.uav_group = pygame.sprite.RenderPlain(self.uav_record.values())
         self.uav_group.update()
         self.uav_group.clear(self.display,self.background)
         self.uav_group.draw(self.display)
 
-        loc_a = myfont.render('Location A', False, (0, 0, 0))
-        loc_b = myfont.render('Location B', False, (0, 0, 0))
-        self.point_1 = PointSprite((0 , 1, 8), 1, loc_a)
-        self.point_2 = PointSprite((1, 8, 2), 1, loc_b)
-
-        self.point_record = {
-            'point1': self.point_1,
-            'point2': self.point_2
-        }
+        self.points = []
+        self.point_record = {}
+        for i in range(n_locations):
+            font = myfont.render('Location {}'.format(chr(i+65)), False, (0,0,0))
+            point_sprite = PointSprite(locations[i], 1, font)
+            self.points.append(point_sprite)
+            self.point_record['point{}'.format(i)] = point_sprite
         self.point_group = pygame.sprite.RenderPlain(self.point_record.values())
         self.point_group.update()
         self.point_group.clear(self.display,self.background)
@@ -352,13 +314,18 @@ class App:
 
     def reset_map(self):
         self.display.fill(pygame.Color("white"))
-        pygame.draw.line(self.display, (100, 100, 100),
-                         [int(self.width/LAYERS), 0],
-                    [int(self.width/LAYERS), self.height], 5)
-        self.display.blit(self.point_1.text, dpos2pos(self.point_1.dpos_text))
-        self.display.blit(self.point_2.text, dpos2pos(self.point_2.dpos_text))
-        self.display.blit(self.layer_1, (300,635))
-        self.display.blit(self.layer_2, (750, 635))
+        self.draw_alt_borders()
+        for i in range(n_locations):
+            self.display.blit(self.points[i].text,
+                              dpos2pos(self.points[i].dpos_text))
+        for i in range(n_layers):
+            self.display.blit(self.layers[i], (300,635))
+
+    def draw_alt_borders(self):
+        for i in range(1,n_layers):
+            pygame.draw.line(self.display, (100, 100, 100),
+                             [i*int(self.width/self.n_layers), 0],
+                             [i*int(self.width/self.n_layers), self.height], 5)
 
     def resolve_conflicts(self, conflicts):
         for conflict in conflicts:
@@ -395,26 +362,19 @@ class App:
         pygame.display.flip()
         sleep(0.1)
 
+#fix this
     def plan_mission(self, ctrl_output):
-        plan = {
-            "uav0" :[],
-            "uav1" :[],
-            "uav2" :[]
-        }
-        plan["uav2"].append('{}'.format(ctrl_output["uav3_intent"]))
-        plan["uav1"].append('{}'.format(ctrl_output["uav2_intent"]))
-        plan["uav0"].append('{}'.format(ctrl_output["uav1_intent"]))
-        plan["uav2"].append('{}'.format(ctrl_output["uav3_goto"]))
-        plan["uav1"].append('{}'.format(ctrl_output["uav2_goto"]))
-        plan["uav0"].append('{}'.format(ctrl_output["uav1_goto"]))
-        plan["uav2"].append('{}'.format(ctrl_output["uav3_layer"]))
-        plan["uav1"].append('{}'.format(ctrl_output["uav2_layer"]))
-        plan["uav0"].append('{}'.format(ctrl_output["uav1_layer"]))
+        plan = {}
+        for uav in self.uav_record.keys():
+            plan[uav] = []
+            plan[uav].append('{}'.format(ctrl_output[uav+"_intent"]))
+            plan[uav].append('{}'.format(ctrl_output[uav+"_goto"]))
+            plan[uav].append('{}'.format(ctrl_output[uav+"_layer"]))
         return plan
 
     def exec_plan(self, plan):
         conflicts = []
-        for uav in UAVS:
+        for uav in self.uav_record.keys():
             self.uav_record[uav].setLayer(plan[uav][-1])
             plan[uav].pop()
             self.uav_record[uav].gotoPoint(plan[uav][-1])
@@ -423,7 +383,7 @@ class App:
             plan[uav].pop()
         if len(conflicts)>0:
             self.resolve_conflicts(conflicts)
-        #self.show()
+
     def on_execute(self):
         if self.on_init() == False:
             self._running = False
@@ -434,11 +394,12 @@ class App:
 
             self.show()
             # creating inputs to controller
-            uav0_1_collide = self.uav_0.collide(self.uav_1)
-            uav0_2_collide = self.uav_0.collide(self.uav_2)
-            uav1_2_collide = self.uav_1.collide(self.uav_2)
-            inputs = return_input(uav0_1_collide, uav0_2_collide,
-                                  uav1_2_collide)
+            inputs = {}
+            for i in range(n_uavs):
+                for j in range(i,n_uavs):
+                    if i != j:
+                        inputs['uav{}_{}_collide'.format(i,j)] =\
+                        self.uavs[i].collide(self.uavs[j])
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
             plan = self.plan_mission(outputs)
@@ -448,5 +409,45 @@ class App:
         self.on_cleanup()
 
 if __name__ == "__main__" :
-    theApp = App()
+    n_uavs = 4
+    n_layers = 3
+    n_locations = 4
+
+    keys = ['uav'+str(i) for i in range(n_uavs)]
+    uav_props = {'init':None,'color':None,'label':None,'id':None}
+    uavs = {key:{'init':None,'color':None,'label':None,'id':None} for key in keys}
+    uavs['uav0']['init'] = (0, 2, 12)
+    uavs['uav0']['color'] = BLACK
+    uavs['uav0']['label'] = 'black'
+    uavs['uav0']['id'] = 0
+    uavs['uav1']['init'] = (1, 7, 2)
+    uavs['uav1']['color'] = PURPLE
+    uavs['uav1']['label'] = 'purple'
+    uavs['uav1']['id'] = 1
+    uavs['uav2']['init'] = (2, 2, 2)
+    uavs['uav2']['color'] = GREEN
+    uavs['uav2']['label'] = 'green'
+    uavs['uav2']['id'] = 2
+    uavs['uav3']['init'] = (2, 8, 8)
+    uavs['uav3']['color'] = RED
+    uavs['uav3']['label'] = 'red'
+    uavs['uav3']['id'] = 3 
+    locations = []
+    locations.append((0,1,8))
+    locations.append((1,8,2))
+    locations.append((2,1,8))
+    locations.append((2,1,2))
+
+    pygame.init()
+    pygame.font.init()
+
+    myfont = pygame.font.SysFont('Comic Sans MS', 22)
+    escape_points = Queue(maxsize=6)
+    escape_points.put((1,1))
+    escape_points.put((8,1))
+    escape_points.put((5,5))
+    escape_points.put((4,11))
+
+    ctrl = Ca_4()
+    theApp = App(n_uavs=4,n_layers=3,n_locations=4)
     theApp.on_execute()
