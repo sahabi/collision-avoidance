@@ -21,7 +21,7 @@ def color_surface(surface, color):
     arr[:,:,2] = color[2]
 
 def dpos2pos(dpos):
-    return (dpos[0]*450 + dpos[1]*45, dpos[2]*45)
+    return (dpos[0]*L_WIDTH + dpos[1]*L_WIDTH/10., dpos[2]*L_LENGTH)
 
 def _collide(rect1, rect2):
     for layer1 in range(n_layers):
@@ -56,11 +56,11 @@ class PointSprite(pygame.sprite.Sprite):
 
 class UAVSprite(pygame.sprite.Sprite):
 
-    def __init__(self, dpos, color, display, ID, IDn, escape_point= (1, 1)):
+    def __init__(self, dpos, color, display, label, IDn):
         pygame.sprite.Sprite.__init__(self)
         self.src_image = pygame.image.load("assets/uav.png")
         self.dpos = dpos
-        self.ID = ID
+        self.label = label
         self.IDn = IDn
         self.pos = dpos2pos(dpos)
         arr = pygame.surfarray.pixels3d(self.src_image)
@@ -71,12 +71,10 @@ class UAVSprite(pygame.sprite.Sprite):
         self.display = display
         self.region_rect = self.make_regions(self.dpos)
         self.path_region = []
-        esc_label = myfont.render(ID, False, (0,0,0))
-        self.escape_point = escape_point
 
     def move(self, action):
         l, x, y = self.dpos
-        if action == 'east' and self.next_state[1] < 9:
+        if action == 'east' and self.next_state[1] < 10:
             x += 1
         elif action == 'west' and self.next_state[1] > 1:
             x -= 1
@@ -86,9 +84,11 @@ class UAVSprite(pygame.sprite.Sprite):
             y -= 1
         self.set_dpos(l, x, y)
 
-#fix this
     def setLayer(self, layer):
-        self.set_dpos([0 if layer[6] == 'F' else 1, self.dpos[1], self.dpos[2]])
+        self.set_dpos([layer_map[layer[6]], self.dpos[1], self.dpos[2]])
+
+    def in_region(self,dpos):
+        return True
 
     def set_dpos(self, dpos, safe = True):
         if safe and self.in_region(dpos):
@@ -97,31 +97,6 @@ class UAVSprite(pygame.sprite.Sprite):
         else:
            sys.quit()
 
-    def in_region(self, dpos):
-        return True
-
-    def collide(self, uav):
-        rect1 = [rect for rect in self.region_rect]
-        rect2 = [rect for rect in uav.region_rect]
-        return _collid(rect1, rect2)
-
-    def collide(self, uav):
-        for layer1 in range(n_layers):
-            for layer2 in range(n_layers):
-                if Rect(self.region_rect[layer1]).colliderect(Rect(uav.region_rect[layer2])):
-                    return True
-                else:
-                    return False
-
-    def region_intersects(self, point):
-        for uav in theApp.uav_record.keys():
-            uav_o = theApp.uav_record[uav]
-            if self.ID == uav_o.ID:
-                continue
-            if self.collide(uav_o) and point[0] == uav_o.dpos[0]:
-                return uav_o
-        return False
-
     def _gotoPoint(self, point):
         path = self.get_path(point.dpos)
         for point in path:
@@ -129,7 +104,6 @@ class UAVSprite(pygame.sprite.Sprite):
             theApp.show()
             sleep(.1)
 
-#fix this
     def gotoPoint(self, point):
         if point[4] == 'N':
             return
@@ -162,21 +136,17 @@ class UAVSprite(pygame.sprite.Sprite):
         points = zip(zpoints, xpoints, ypoints)
         return points
 
-#fix this
     def setIntent(self, intent):
         app = theApp
         conflict = ""
         if intent[4] == 'N':
             return
-        print ord(intent[4])-65
         point = app.point_record['point{}'.format(ord(intent[4])-65)]
-        print intent[4]
         path = self.get_path(point.dpos)
-        #self.path_region = self.make_path_regions(path)
         self.update_region(point.dpos)
-        if self.region_intersects(point.dpos):
+        if self.region_intersects(point.dpos[0]):
             conflict = "{}_{}".format(self.IDn,
-                                      self.region_intersects(point.dpos).IDn)
+                                      self.region_intersects(point.dpos[0]).IDn)
         sleep(.1)
         return conflict
 
@@ -185,28 +155,28 @@ class UAVSprite(pygame.sprite.Sprite):
         regions = []
         if not path:
             for layer in range(n_layers):
-                x = layer*450 + (min(self.pos[0]%450, dpos[1]*45)) - buf
-                y = min(self.pos[1], dpos[2]*45) - buf
-                width = 2*buf + max(self.pos[0]%450, dpos[1]*45) -\
-                (min(self.pos[0]%450, dpos[1]*45))
-                length = 2*buf + max(self.pos[1], dpos[2]*45) - min(self.pos[1],
-                        dpos[2]*45)
+                x = layer*L_WIDTH + (min(self.pos[0]%L_WIDTH, dpos[1]*L_LENGTH)) - buf
+                y = min(self.pos[1], dpos[2]*46) - buf
+                width = 2*buf + max(self.pos[0]%466, dpos[1]*46) -\
+                (min(self.pos[0]%466, dpos[1]*46))
+                length = 2*buf + max(self.pos[1], dpos[2]*46) - min(self.pos[1],
+                        dpos[2]*46)
                 regions.append([x, y, width, length])
         return regions
 
-    def make_path_regions(self, path):
-        regions = []
-        for point in path:
-            regions.append(self.make_unit_region(point))
-        return regions
+    #def make_path_regions(self, path):
+    #    regions = []
+    #    for point in path:
+    #        regions.append(self.make_unit_region(point))
+    #    return regions
 
-    def make_unit_region(self, dpos):
-        return [dpos[0]*450+dpos[1]*45 - 30, dpos[2]*45 - 30, 60, 60]
+    #def make_unit_region(self, dpos):
+    #    return [dpos[0]*466+dpos[1]*46 - 30, dpos[2]*46 - 30, 60, 60]
 
     def shrink_regions(self, app=None):
         self.update_region(self.dpos)
 
-    def send_away(self, app):
+    def send_away(self):
         label = myfont.render('A',False,(0,0,0))
         escp = self.get_escape()
         escape_point = PointSprite((self.dpos[0],escp[0],
@@ -223,7 +193,30 @@ class UAVSprite(pygame.sprite.Sprite):
             self.get_escape()
 
     def is_point_safe(self, point):
+        while self.region_intersects(self.dpos[0],goto=point):
+            pass
         return True
+
+    def collide(self, uav):
+        for layer1 in range(n_layers):
+            for layer2 in range(n_layers):
+                if Rect(self.region_rect[layer1]).colliderect(Rect(uav.region_rect[layer2])):
+                    return True
+                else:
+                    return False
+
+    def region_intersects(self,layer,goto=None):
+        if not goto is None:
+            self.region_rect = self.make_regions((layer,goto[0],goto[1]))
+        for uav in theApp.uav_record.keys():
+            uav_o = theApp.uav_record[uav]
+            if self.label == uav_o.label:
+                continue
+            else:
+                if self.collide(uav_o) and layer == uav_o.dpos[0]:
+                    uav_o.send_away()
+                    return uav_o
+        return False
 
 
     def update(self):
@@ -233,7 +226,6 @@ class UAVSprite(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.src_image, 0)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
-        print self.dpos
 
     def update_region(self, dpos, color = None):
         self.region_rect = []
@@ -245,9 +237,6 @@ class UAVSprite(pygame.sprite.Sprite):
                 pygame.draw.rect(self.display, self.color, self.region_rect[layer], 2)
         theApp.show()
 
-    def get_layer(self):
-        return self.discrete[0]
-
 class App:
     def __init__(self, n_uavs, n_layers, n_locations):
         self._running = True
@@ -256,13 +245,12 @@ class App:
         self.n_layers = n_layers
         self.n_locations = n_locations
         self.layers = []
-        self.size = self.width, self.height = 1400, 700
+        self.size = self.width, self.height = WIDTH, LENGTH
 
     def on_init(self):
         self.make_env()
         pygame.display.flip()
 
-#fix this
     def make_env(self):
         for i in range(self.n_layers):
             self.layers.append(myfont.render('Altitude Layer {}'.format(i),
@@ -285,11 +273,6 @@ class App:
             self.uav_record[key] = uav_sprite
             self.uavs.append(uav_sprite)
 
-        self.uav_group = pygame.sprite.RenderPlain(self.uav_record.values())
-        self.uav_group.update()
-        self.uav_group.clear(self.display,self.background)
-        self.uav_group.draw(self.display)
-
         self.points = []
         self.point_record = {}
         for i in range(n_locations):
@@ -301,6 +284,10 @@ class App:
         self.point_group.update()
         self.point_group.clear(self.display,self.background)
         self.point_group.draw(self.display)
+        self.uav_group = pygame.sprite.RenderPlain(self.uav_record.values())
+        self.uav_group.update()
+        self.uav_group.clear(self.display,self.background)
+        self.uav_group.draw(self.display)
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -319,7 +306,7 @@ class App:
             self.display.blit(self.points[i].text,
                               dpos2pos(self.points[i].dpos_text))
         for i in range(n_layers):
-            self.display.blit(self.layers[i], (300,635))
+            self.display.blit(self.layers[i], (((i+1)*L_WIDTH)-120,LENGTH-30))
 
     def draw_alt_borders(self):
         for i in range(1,n_layers):
@@ -345,7 +332,7 @@ class App:
             fixes.append(second_uav.shrink_regions)
             i = 0
             while(_collide(temp_region, second_uav.region_rect)):
-                if i == 9:
+                if i == 90:
                     sys.quit()
                 fixes[i%2](self)
                 i += 1
@@ -362,7 +349,6 @@ class App:
         pygame.display.flip()
         sleep(0.1)
 
-#fix this
     def plan_mission(self, ctrl_output):
         plan = {}
         for uav in self.uav_record.keys():
@@ -402,6 +388,7 @@ class App:
                         self.uavs[i].collide(self.uavs[j])
             # getting the outputs out of the controller
             outputs = ctrl.move(**inputs)
+            print outputs
             plan = self.plan_mission(outputs)
             self.exec_plan(plan)
             sleep(.1)
@@ -412,7 +399,10 @@ if __name__ == "__main__" :
     n_uavs = 4
     n_layers = 3
     n_locations = 4
-
+    WIDTH = 1400
+    LENGTH = 700
+    L_WIDTH = 1400/float(n_layers)
+    L_LENGTH = 700/15.
     keys = ['uav'+str(i) for i in range(n_uavs)]
     uav_props = {'init':None,'color':None,'label':None,'id':None}
     uavs = {key:{'init':None,'color':None,'label':None,'id':None} for key in keys}
@@ -431,22 +421,21 @@ if __name__ == "__main__" :
     uavs['uav3']['init'] = (2, 8, 8)
     uavs['uav3']['color'] = RED
     uavs['uav3']['label'] = 'red'
-    uavs['uav3']['id'] = 3 
+    uavs['uav3']['id'] = 3
     locations = []
     locations.append((0,1,8))
     locations.append((1,8,2))
-    locations.append((2,1,8))
-    locations.append((2,1,2))
-
+    locations.append((2,8,13))
+    locations.append((2,5,8))
+    layer_map = {'F':0, 'S':1, 'T':2}
     pygame.init()
     pygame.font.init()
 
     myfont = pygame.font.SysFont('Comic Sans MS', 22)
-    escape_points = Queue(maxsize=6)
-    escape_points.put((1,1))
-    escape_points.put((8,1))
-    escape_points.put((5,5))
-    escape_points.put((4,11))
+    escape_points = Queue(maxsize=9*15)
+    for i in range(9):
+        for j in range(15):
+            escape_points.put((i+1,j+1))
 
     ctrl = Ca_4()
     theApp = App(n_uavs=4,n_layers=3,n_locations=4)
