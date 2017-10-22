@@ -224,7 +224,6 @@ class UAVSprite(pygame.sprite.Sprite):
                     return uav_o
         return False
 
-
     def update(self):
         for layer in range(len(self.region_rect)):
             if layer == self.dpos[0]:
