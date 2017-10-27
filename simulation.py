@@ -310,7 +310,7 @@ class App:
             self.display.blit(self.points[i].text,
                               dpos2pos(self.points[i].dpos_text))
         for i in range(n_layers):
-            self.display.blit(self.layers[i], (((i+1)*L_WIDTH)-120,LENGTH-30))
+            self.display.blit(self.layers[i], (((i+1)*L_WIDTH)-320,LENGTH-670))
 
     def draw_alt_borders(self):
         for i in range(1,n_layers):
@@ -434,14 +434,14 @@ if __name__ == "__main__" :
     uavs['uav3']['id'] = 3
     locations = []
     locations.append((0,1,8))
-    locations.append((1,8,2))
-    locations.append((2,8,13))
-    locations.append((2,5,8))
+    locations.append((1,6,5))
+    locations.append((2,5,13))
+    locations.append((2,2,8))
     layer_map = {'F':0, 'S':1, 'T':2}
     pygame.init()
     pygame.font.init()
 
-    myfont = pygame.font.SysFont('Comic Sans MS', 22)
+    myfont = pygame.font.SysFont('Comic Sans MS', 42)
     escape_points = Queue(maxsize=9*15)
     for i in range(9):
         for j in range(15):
