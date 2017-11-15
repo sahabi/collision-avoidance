@@ -192,13 +192,13 @@ class UAVSprite(pygame.sprite.Sprite):
     def get_escape(self):
         point = escape_points.get()
         escape_points.put(point)
-        print point
-        print list(escape_points.queue)
+        #print point
+        #print list(escape_points.queue)
         if self.is_point_safe(point):
-            print "safe"
+            #print "safe"
             return point
         else:
-            print "not safe"
+            #print "not safe"
             return self.get_escape()
 
     def is_point_safe(self, point):
