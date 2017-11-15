@@ -140,7 +140,7 @@ class UAVSprite(pygame.sprite.Sprite):
 
     def setIntent(self, intent):
         app = theApp
-        conflict = ""
+        conflict = None
         if intent[4] == 'N':
             return
         point = app.point_record['point{}'.format(ord(intent[4])-65)]
@@ -149,7 +149,6 @@ class UAVSprite(pygame.sprite.Sprite):
         if self.region_intersects(point.dpos[0]):
             conflict = "{}_{}".format(self.IDn,
                                       self.region_intersects(point.dpos[0]).IDn)
-        sleep(.1)
         return conflict
 
     def make_regions(self, dpos, path=False):
@@ -369,6 +368,7 @@ class App:
 
     def exec_plan(self, plan):
         conflicts = []
+        intent_plans = []
         for uav in self.uav_record.keys():
             self.uav_record[uav].setLayer(plan[uav][-1])
             plan[uav].pop()
@@ -377,9 +377,17 @@ class App:
             plan[uav].pop()
         for uav in self.uav_record.keys():
             conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1]))
+            intent_plans.append(plan[uav][-1])
             plan[uav].pop()
-        if len(conflicts)>0:
+        while len([i for i in conflicts if i is not None]) > 0:
             self.resolve_conflicts(conflicts)
+            print conflicts
+            print intent_plans
+            conflicts = []
+            for intent in intent_plans:
+                conflicts.append(self.uav_record[uav].setIntent(intent))
+
+
 
     def on_execute(self):
         if self.on_init() == False:
@@ -391,15 +399,15 @@ class App:
 
             self.show()
             # creating inputs to controller
-            inputs = {}
+            cinput = {}
             for i in range(n_uavs):
                 for j in range(i,n_uavs):
                     if i != j:
-                        inputs['uav{}_{}_collide'.format(i,j)] =\
+                        cinput['uav{}_{}_collide'.format(i,j)] =\
                         self.uavs[i].collide(self.uavs[j])
-            # getting the outputs out of the controller
-            outputs = ctrl.move(**inputs)
-            plan = self.plan_mission(outputs)
+            # getting the controller's output
+            output = ctrl.move(**cinput)
+            plan = self.plan_mission(output)
             self.exec_plan(plan)
             sleep(.1)
 
