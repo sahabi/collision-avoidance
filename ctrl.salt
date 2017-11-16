@@ -27,8 +27,14 @@ output uav3_intent : Pos = None
 
 env_liveness
 
-  !(uav0_1_collide /\ uav0_2_collide /\ uav0_3_collide /\ uav1_2_collide /\ uav1_3_collide /\ uav2_3_collide)
+  !(uav0_1_collide /\ uav0_2_collide /\ uav0_3_collide)
+  !(uav0_1_collide /\ uav1_2_collide /\ uav1_3_collide)
+  !(uav0_2_collide /\ uav1_2_collide /\  uav2_3_collide)
+  !(uav0_3_collide /\ uav1_3_collide /\  uav2_3_collide)
 
+env_trans
+
+  !(uav0_1_collide /\ uav0_2_collide /\ uav0_3_collide /\ uav1_2_collide /\ uav1_3_collide /\ uav2_3_collide)
 
 sys_trans
 
@@ -61,6 +67,8 @@ sys_trans
   uav0_2_collide -> uav0_layer != uav2_layer
 
   uav0_3_collide -> uav0_layer != uav3_layer
+  
+  uav1_2_collide -> uav1_layer != uav2_layer
 
   uav1_3_collide -> uav1_layer != uav3_layer
 
