@@ -3,7 +3,7 @@ import pygame
 from pygame.locals import *
 from pygame import Rect
 from time import sleep
-from Ctrl import Controller_4 as Ca_4
+from Controller_4 import Controller_4 as Ca_4
 import sys
 from Queue import Queue
 
