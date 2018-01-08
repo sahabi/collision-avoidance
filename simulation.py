@@ -377,14 +377,14 @@ class App:
             plan[uav].pop()
         for uav in self.uav_record.keys():
             conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1]))
-        print conflicts
+        #print conflicts
         for uav in self.uav_record.keys():
             intent_plans.append(plan[uav][-1])
             plan[uav].pop()
         while len([i for i in conflicts if i is not None]) > 0:
             self.resolve_conflicts(conflicts)
-            print conflicts
-            print intent_plans
+            #print conflicts
+            #print intent_plans
             conflicts = []
             for i,uav in enumerate(self.uav_record.keys()):
                 conflicts.append(self.uav_record[uav].setIntent(intent_plans[i]))
@@ -407,7 +407,7 @@ class App:
                         self.uavs[i].collide(self.uavs[j])
             # getting the controller's output
             output = ctrl.move(**cinput)
-            print output
+            #print output
             plan = self.plan_mission(output)
             self.exec_plan(plan)
             sleep(.1)
