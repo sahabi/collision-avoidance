@@ -3,7 +3,7 @@ import pygame
 from pygame.locals import *
 from pygame import Rect
 from time import sleep
-from Controller_4 import Controller_4 as Ca_4
+from Controller import Controller as C
 import sys
 from Queue import Queue
 
@@ -433,6 +433,6 @@ if __name__ == "__main__" :
     for i in range(9):
         for j in range(15):
             escape_points.put((i+1,j+1))
-    ctrl = Ca_4()
+    ctrl = C()
     theApp = App(n_uavs=4,n_layers=3,n_locations=4)
     theApp.on_execute()

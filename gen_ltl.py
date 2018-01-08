@@ -20,7 +20,7 @@ layers += "First"
 
 tmpinput = {}
 
-tmpinput["controller_name"] = "Controller_4"
+tmpinput["controller_name"] = "Controller"
 
 for i in range(n_locations):
     locations += [' | ']
