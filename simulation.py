@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
+import copy
 import pygame
 from pygame.locals import *
+from pygame import Rect
 from time import sleep
 from Ctrl import Controller_4 as Ca_4
-from pygame import Rect
 import sys
 from Queue import Queue
-import copy
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 PURPLE = (120, 78, 240)
@@ -52,7 +52,6 @@ class PointSprite(pygame.sprite.Sprite):
         return "{}, {}, {} ".format(self.dpos, self.text, self.label)
 
     __repr__ = __str__
-
 
 class UAVSprite(pygame.sprite.Sprite):
 
@@ -164,18 +163,7 @@ class UAVSprite(pygame.sprite.Sprite):
                 length = 2*buf + max(self.pos[1], dpos[2]*L_WIDTH/10.) - min(self.pos[1],
                         dpos[2]*L_LENGTH/15.)
                 regions.append([x, y, width, length])
-        #if self.label == 'green':
-        #    print regions[0], x,y
         return regions
-
-    #def make_path_regions(self, path):
-    #    regions = []
-    #    for point in path:
-    #        regions.append(self.make_unit_region(point))
-    #    return regions
-
-    #def make_unit_region(self, dpos):
-    #    return [dpos[0]*466+dpos[1]*46 - 30, dpos[2]*46 - 30, 60, 60]
 
     def shrink_regions(self, app=None):
         self.update_region(self.dpos)
@@ -191,13 +179,9 @@ class UAVSprite(pygame.sprite.Sprite):
     def get_escape(self):
         point = escape_points.get()
         escape_points.put(point)
-        #print point
-        #print list(escape_points.queue)
         if self.is_point_safe(point):
-            #print "safe"
             return point
         else:
-            #print "not safe"
             return self.get_escape()
 
     def is_point_safe(self, point):
@@ -377,14 +361,11 @@ class App:
             plan[uav].pop()
         for uav in self.uav_record.keys():
             conflicts.append(self.uav_record[uav].setIntent(plan[uav][-1]))
-        #print conflicts
         for uav in self.uav_record.keys():
             intent_plans.append(plan[uav][-1])
             plan[uav].pop()
         while len([i for i in conflicts if i is not None]) > 0:
             self.resolve_conflicts(conflicts)
-            #print conflicts
-            #print intent_plans
             conflicts = []
             for i,uav in enumerate(self.uav_record.keys()):
                 conflicts.append(self.uav_record[uav].setIntent(intent_plans[i]))
@@ -398,7 +379,6 @@ class App:
                 self.on_event(event)
 
             self.show()
-            # creating inputs to controller
             cinput = {}
             for i in range(n_uavs):
                 for j in range(i,n_uavs):
@@ -407,7 +387,6 @@ class App:
                         self.uavs[i].collide(self.uavs[j])
             # getting the controller's output
             output = ctrl.move(**cinput)
-            #print output
             plan = self.plan_mission(output)
             self.exec_plan(plan)
             sleep(.1)
@@ -449,13 +428,11 @@ if __name__ == "__main__" :
     layer_map = {'F':0, 'S':1, 'T':2}
     pygame.init()
     pygame.font.init()
-
     myfont = pygame.font.SysFont('Comic Sans MS', 42)
     escape_points = Queue(maxsize=9*15)
     for i in range(9):
         for j in range(15):
             escape_points.put((i+1,j+1))
-
     ctrl = Ca_4()
     theApp = App(n_uavs=4,n_layers=3,n_locations=4)
     theApp.on_execute()
